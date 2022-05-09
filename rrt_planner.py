@@ -262,7 +262,7 @@ def get_path(current_state, current_goal, obstacles, play_area):
 
 def rollout(num_rollouts, current_state, current_goal, obstacles, play_area):
     """
-    Performan rollouts from the current_state to the current_goal avoiding obstacles and within the play_area.
+    Perform rollouts from the current_state to the current_goal avoiding obstacles and within the play_area.
 
     :param num_rollouts:    The number of rollouts to execute
     :param current_state:   The current state

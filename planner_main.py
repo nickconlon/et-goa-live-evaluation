@@ -101,7 +101,7 @@ def check_new_goal(goal_sub, current_goal):
     print("Checking for new goal")
     try:
         _new_goal = goal_sub.receive(flags=zmq.NOBLOCK)
-        _new_goal = int(_new_goal.split()[1]) - 1
+        _new_goal = int(_new_goal.split()[1])
         return _new_goal
     except:
         pass
@@ -123,12 +123,12 @@ def control_loop():
     s = [0, 0]
 
     # List of goals - can be updated in realtime
-    goals = [[-4, 7], [-1, 8], [2, 8]]
+    goals = [[0, 0], [-4, 7], [-1, 8], [2, 8]]
 
     # Wait for the first goal from the UI
     print("Waiting for first goal")
     new_goal = goal_subscriber.receive()
-    goal_idx = int(new_goal.split()[1]) - 1
+    goal_idx = int(new_goal.split()[1])
     print(new_goal)
 
     r = 0

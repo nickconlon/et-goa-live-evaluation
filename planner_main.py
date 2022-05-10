@@ -5,6 +5,11 @@ import matplotlib.pyplot as plt
 import zmq
 import math
 
+import rospy
+from tf.transformations import quaternion_from_euler
+import actionlib
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+
 from outcome_assessment import get_self_confidence
 from zmq_publisher import ZmqPublisher
 from zmq_subscriber import ZmqSubscriber
@@ -12,6 +17,31 @@ import rrt_planner as planner
 
 plt.switch_backend('Agg')
 
+
+def movebase_client(x, y, theta):
+    client = actionlib.SimpleActionClient('move_base',MoveBaseAction)
+    client.wait_for_server()
+
+    goal = MoveBaseGoal()
+    goal.target_pose.header.frame_id = "odom"
+    goal.target_pose.header.stamp = rospy.Time.now()
+    goal.target_pose.pose.position.x = x
+    goal.target_pose.pose.position.y = y
+    q = quaternion_from_euler(0, 0, np.deg2rad(theta))
+    goal.target_pose.pose.orientation.x = q[0]
+    goal.target_pose.pose.orientation.y = q[1]
+    goal.target_pose.pose.orientation.z = q[2]
+    goal.target_pose.pose.orientation.w = q[3]
+
+    client.send_goal(goal)
+    rospy.sleep(10)
+    #wait = client.wait_for_result()
+    #if not wait:
+    #    rospy.logerr("Action server not available!")
+    #    rospy.signal_shutdown("Action server not available!")
+    #else:
+    #    return client.get_result()
+    return 1
 
 def canvas2rgb_array(canvas):
     """
@@ -28,7 +58,7 @@ def canvas2rgb_array(canvas):
     return buf.reshape(scale * nrows, scale * ncols, 3)
 
 
-def get_map(paths, obstacles, state, goal):
+def get_map(paths, obstacles, state, goal, play_area):
     """
     Create a map of the play area
 
@@ -78,13 +108,13 @@ def check_new_goal(goal_sub, current_goal):
     return current_goal
 
 
-if __name__ == "__main__":
+def control_loop():
     confidence_publisher = ZmqPublisher("*", "5556")
     map_publisher = ZmqPublisher("*", "5557")
     goal_subscriber = ZmqSubscriber("localhost", "5558", "goal")
 
     # Obstacles in the environment - can be updated in realtime
-    obstacle_list = [(0, 2, 0.5), (0.5, 3, 0.8), (3, 7, 0.5), (0, 8, 0.3)]
+    obstacle_list = [(0, 2, 0.5), (0.5, 3, 0.8), (3, 7, 0.5), (0, 8, 0.3), (-2, 5, 1)]
 
     # The play area [minx, maxx, miny, maxy]
     play_area = [-5, 5, 0, 10]
@@ -101,6 +131,7 @@ if __name__ == "__main__":
     goal_idx = int(new_goal.split()[1]) - 1
     print(new_goal)
 
+    r = 0
     for i in range(15):
         """
         Check for any new goals for the robot
@@ -121,18 +152,24 @@ if __name__ == "__main__":
         """
         Do a planning rollout, create a new image of the plan, publish the image to the UI
         """
-        waypoints = planner.rollout(1, s, goals[goal_idx], obstacle_list, play_area)
-        img = get_map(waypoints, obstacle_list, s, goals[goal_idx])
+        waypoints = planner.rollout(1, s, goals[goal_idx], obstacle_list, play_area)[0]
+        img = get_map([waypoints], obstacle_list, s, goals[goal_idx], play_area)
         string = base64.b64encode(cv2.imencode('.png', img)[1]).decode()
-        print("Publishing new map")
-        print(waypoints)
         map_publisher.publish(string)
+        print("Publishing new map")
 
         """
         TODO Publish the next waypoint to ROS
         """
-        next_waypoint = waypoints[0][1]
-        print("Next waypoint: ", next_waypoint)
+        if len(waypoints) >= 3:
+            next_waypoint = waypoints[1]
+            next_next_waypoint = waypoints[2]
+            next_heading = 90+math.atan2(next_waypoint[1]-next_next_waypoint[1], next_waypoint[0]-next_next_waypoint[0])
+            #TODO this heading isn't right
+            r = movebase_client(next_waypoint[0], next_waypoint[1], next_heading)
+            print("Next waypoint: ({:.2f}, {:.2f}), heading: {:.2f}".format(*next_waypoint, next_heading))
+        else:
+            break
 
         """
         For now - magically teleport to the next waypoint
@@ -141,3 +178,16 @@ if __name__ == "__main__":
         """
         s = next_waypoint
         print(s)
+    return r
+
+if __name__ == "__main__":
+    try:
+        rospy.init_node('movebase_client_py')
+        result = control_loop()
+        if result:
+            rospy.loginfo("Goal execution done!")
+    except rospy.ROSInterruptException:
+        rospy.loginfo("Navigation test finished.")
+
+
+

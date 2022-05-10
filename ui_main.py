@@ -36,6 +36,7 @@ class myMainWindow(QMainWindow, goa_ui.Ui_MainWindow):
         self.area1_button.clicked.connect(self.button1_click)
         self.area2_button.clicked.connect(self.button2_click)
         self.area3_button.clicked.connect(self.button3_click)
+        self.go_home_button.clicked.connect(self.go_home_click)
 
         """
         Setup the confidence listener thread
@@ -89,6 +90,15 @@ class myMainWindow(QMainWindow, goa_ui.Ui_MainWindow):
         except Exception as e:
             print(e)
 
+    def go_home_click(self):
+        try:
+            self.area1_data_label.setStyleSheet("background-color: none")
+            self.area2_data_label.setStyleSheet("background-color: none")
+            self.area3_data_label.setStyleSheet("background-color: none")
+            self.send_new_goal("0")
+        except Exception as e:
+            print(e)
+
     def send_new_goal(self, goal_index):
         try:
             self.goal_publisher.publish("goal {}".format(goal_index))
@@ -116,6 +126,11 @@ class myMainWindow(QMainWindow, goa_ui.Ui_MainWindow):
             self.area1_self_confidence_value.setText("{:.2f}".format(confidence_array[0]))
             self.area2_self_confidence_value.setText("{:.2f}".format(confidence_array[1]))
             self.area3_self_confidence_value.setText("{:.2f}".format(confidence_array[2]))
+
+            value_array = [1,2,3]
+            self.area1_value.setText("{:.2f}".format(value_array[0]))
+            self.area2_value.setText("{:.2f}".format(value_array[1]))
+            self.area3_value.setText("{:.2f}".format(value_array[2]))
         except Exception as e:
             print(e)
 

@@ -28,7 +28,7 @@ def canvas2rgb_array(canvas):
     return buf.reshape(scale * nrows, scale * ncols, 3)
 
 
-def get_map(paths, obstacles, state, goal):
+def get_map(paths, obstacles, state, goal, play_area):
     """
     Create a map of the play area
 
@@ -71,7 +71,7 @@ def check_new_goal(goal_sub, current_goal):
     print("Checking for new goal")
     try:
         _new_goal = goal_sub.receive(flags=zmq.NOBLOCK)
-        _new_goal = int(_new_goal.split()[1]) - 1
+        _new_goal = int(_new_goal.split()[1])
         return _new_goal
     except:
         pass
@@ -93,12 +93,12 @@ if __name__ == "__main__":
     s = [0, 0]
 
     # List of goals - can be updated in realtime
-    goals = [[-4, 7], [-1, 8], [2, 8]]
+    goals = [[0, 0], [-4, 7], [-1, 8], [2, 8]]
 
     # Wait for the first goal from the UI
     print("Waiting for first goal")
     new_goal = goal_subscriber.receive()
-    goal_idx = int(new_goal.split()[1]) - 1
+    goal_idx = int(new_goal.split()[1])
     print(new_goal)
 
     for i in range(15):
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         Do a planning rollout, create a new image of the plan, publish the image to the UI
         """
         waypoints = planner.rollout(1, s, goals[goal_idx], obstacle_list, play_area)
-        img = get_map(waypoints, obstacle_list, s, goals[goal_idx])
+        img = get_map(waypoints, obstacle_list, s, goals[goal_idx], play_area)
         string = base64.b64encode(cv2.imencode('.png', img)[1]).decode()
         print("Publishing new map")
         print(waypoints)

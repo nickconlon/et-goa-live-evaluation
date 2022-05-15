@@ -1,6 +1,6 @@
 # goa_study
 
-With Jackal:
+With Gazebo Jackal:
 1. ```roslaunch jackal_gazebo empty_world.launch confi:=front_laser```
 2. ```roslaunch jackal_navigation odom_navigation_demo.launch```
 3. ```roslaunch jackal_viz view_robot.launch config:=navigation```

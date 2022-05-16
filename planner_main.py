@@ -2,6 +2,7 @@ import numpy as np
 import base64
 import cv2
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import zmq
 import math
 
@@ -91,7 +92,7 @@ class UiCommsClient:
         scale = round(math.sqrt(buf.size / 3 / nrows / ncols))
         return buf.reshape(scale * nrows, scale * ncols, 3)
 
-    def send_map(self, paths, obstacles, state, goal, play_area):
+    def send_map(self, paths, obstacles, state, goal, goals, play_area):
         """
         Create a map of the play area
 
@@ -108,18 +109,25 @@ class UiCommsClient:
             ax.plot([x for (x, y) in path], [y for (x, y) in path], 'r--')
 
         for (x, y, size) in obstacles:
-            deg = list(range(0, 360, 5))
-            deg.append(0)
-            xl = [x + size * math.cos(np.deg2rad(d)) for d in deg]
-            yl = [y + size * math.sin(np.deg2rad(d)) for d in deg]
-            ax.plot(xl, yl, color='black')
+            p = patches.Circle((x, y), radius=size, facecolor='black')
+            ax.add_artist(p)
 
-        ax.scatter(state[0], state[1], c='green')
-        ax.scatter(goal[0], goal[1], c='blue')
+        for (x, y) in goals:
+            p = patches.Circle((x, y), radius=0.5, facecolor='orange', ec='black')
+            ax.add_artist(p)
+
+        p = patches.Circle((goal[0], goal[1]), radius=0.5, facecolor='green', ec='black')
+        ax.add_artist(p)
+
+        ax.scatter(state[0], state[1], c='blue')
+        ax.scatter(goal[0], goal[1], c='green')
         ax.grid()
+        ax.set_axisbelow(True)
         ax.set_aspect('auto')
         ax.set_yticks(np.arange(play_area[2], play_area[3]))
         ax.set_xticks(np.arange(play_area[0], play_area[1]))
+        ax.xaxis.set_ticklabels([])
+        ax.yaxis.set_ticklabels([])
         plt_array = self.canvas2rgb_array(fig.canvas)
         string = base64.b64encode(cv2.imencode('.png', plt_array)[1]).decode()
         self.map_publisher.publish(string)
@@ -202,7 +210,7 @@ def control_loop():
             if not outcome_assessment.checkInCircle(o[0], o[1], o[2], jackal_state[0], jackal_state[1]):
                 obstacles_to_plan_with.append(o)
         waypoints = planner.rollout(1, jackal_state, goals[goal_idx], obstacles_to_plan_with, play_area)[0]
-        ui_interface.send_map([waypoints], obstacle_list, jackal_state, goals[goal_idx], play_area)
+        ui_interface.send_map([waypoints], obstacle_list, jackal_state, goals[goal_idx], goals, play_area)
         print("Publishing new map")
 
         """

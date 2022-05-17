@@ -252,11 +252,13 @@ def get_path(current_state, current_goal, obstacles, play_area):
         play_area=play_area,
         search_until_max_iter=True)
     path = rrt_star.planning(animation=False)
-    path.reverse()
+
     if path is None:
         print("Cannot find path")
+        return []
     else:
         print("found path!!")
+        path.reverse()
     return path
 
 

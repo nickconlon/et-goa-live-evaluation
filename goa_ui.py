@@ -104,7 +104,7 @@ class Ui_MainWindow(object):
         self.area3_self_confidence_value.setFont(font)
         self.area3_self_confidence_value.setObjectName("area3_self_confidence_value")
         self.go_home_button = QtWidgets.QPushButton(self.centralwidget)
-        self.go_home_button.setGeometry(QtCore.QRect(540, 640, 381, 51))
+        self.go_home_button.setGeometry(QtCore.QRect(540, 640, 181, 51))
         font = QtGui.QFont()
         font.setPointSize(25)
         self.go_home_button.setFont(font)
@@ -171,6 +171,12 @@ class Ui_MainWindow(object):
         self.map_area.setGeometry(QtCore.QRect(10, 60, 511, 631))
         self.map_area.setText("")
         self.map_area.setObjectName("map_area")
+        self.stop_robot_button = QtWidgets.QPushButton(self.centralwidget)
+        self.stop_robot_button.setGeometry(QtCore.QRect(730, 640, 191, 51))
+        font = QtGui.QFont()
+        font.setPointSize(25)
+        self.stop_robot_button.setFont(font)
+        self.stop_robot_button.setObjectName("stop_robot_button")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 985, 21))
@@ -207,6 +213,7 @@ class Ui_MainWindow(object):
         self.area3_value.setText(_translate("MainWindow", "N/A"))
         self.area3_value_label.setText(_translate("MainWindow", "Area 3 value:"))
         self.area1_data_label_2.setText(_translate("MainWindow", "Area Map"))
+        self.stop_robot_button.setText(_translate("MainWindow", "Stop Robot"))
 
 
 if __name__ == "__main__":

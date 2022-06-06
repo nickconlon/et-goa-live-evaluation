@@ -259,7 +259,7 @@
      <rect>
       <x>540</x>
       <y>640</y>
-      <width>381</width>
+      <width>181</width>
       <height>51</height>
      </rect>
     </property>
@@ -443,6 +443,24 @@
     </property>
     <property name="text">
      <string/>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="stop_robot_button">
+    <property name="geometry">
+     <rect>
+      <x>730</x>
+      <y>640</y>
+      <width>191</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>25</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Stop Robot</string>
     </property>
    </widget>
   </widget>

@@ -184,6 +184,7 @@ class States:
     AT_WAYPOINT = 3
     AT_GOAL = 4
     EVENT_TRIGGERED = 5
+    STOPPED = 6
 
     @staticmethod
     def toString(state):
@@ -253,11 +254,21 @@ def control_loop():
         Check for any goal updates
         """
         goal_idx = ui_interface.check_new_goal(goal_idx)
-
+        if goal_idx == -1:
+            control_state = States.STOPPED
         """
         State Machine
         """
-        if control_state == States.DRIVING:
+        if control_state == States.STOPPED:
+            """
+            Stop if we should stop
+            """
+            gazebo_interface.move_base_srv.cancelGoal()
+
+        elif control_state == States.DRIVING:
+            """
+            If we are driving, then check if we reached the waypoint or the goal
+            """
             if distance(next_waypoint, jackal_state) <= 0.5:
                 if distance(jackal_state, goals[goal_idx]) <= 0.5:
                     control_state = States.AT_GOAL
@@ -265,6 +276,9 @@ def control_loop():
                     control_state = States.AT_WAYPOINT
 
         elif control_state == States.AT_WAYPOINT:
+            """
+            If we are at the waypoint, then cancel the goal and plan to the next waypoint
+            """
             gazebo_interface.move_base_srv.cancelGoal()
             control_state = States.PLANNING
 
@@ -298,6 +312,9 @@ def control_loop():
             control_state = States.DRIVING
 
         elif control_state == States.AT_GOAL:
+            """
+            If we are at the goal, then stay there forever.. for now
+            """
             pass
         elif control_state == States.EVENT_TRIGGERED:
             """

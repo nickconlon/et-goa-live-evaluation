@@ -1,5 +1,6 @@
 import base64
 import numpy as np
+import traceback
 from PyQt5.QtWidgets import QMainWindow, QApplication
 from PyQt5.QtGui import QPixmap, QImage
 import PyQt5.QtCore as QtCore
@@ -71,6 +72,7 @@ class myMainWindow(QMainWindow, goa_ui.Ui_MainWindow):
             self.send_new_goal("1")
         except Exception as e:
             print(e)
+            traceback.print_exc()
 
     def button2_click(self):
         try:
@@ -80,6 +82,7 @@ class myMainWindow(QMainWindow, goa_ui.Ui_MainWindow):
             self.send_new_goal("2")
         except Exception as e:
             print(e)
+            traceback.print_exc()
 
     def button3_click(self):
         try:
@@ -89,6 +92,7 @@ class myMainWindow(QMainWindow, goa_ui.Ui_MainWindow):
             self.send_new_goal("3")
         except Exception as e:
             print(e)
+            traceback.print_exc()
 
     def go_home_click(self):
         try:
@@ -98,6 +102,15 @@ class myMainWindow(QMainWindow, goa_ui.Ui_MainWindow):
             self.send_new_goal("0")
         except Exception as e:
             print(e)
+            traceback.print_exc()
+
+    def stop_robot_click(self):
+        try:
+            self.send_new_goal("-1")
+            print("Stopping Robot")
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
 
     def send_new_goal(self, goal_index):
         try:

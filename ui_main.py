@@ -64,6 +64,8 @@ class myMainWindow(QMainWindow, goa_ui.Ui_MainWindow):
         """
         self.goal_publisher = publisher.ZmqPublisher("*", "5558")
 
+        self.stop_robot_button.clicked.connect(self.stop_robot_click)
+
     def button1_click(self):
         try:
             self.area1_data_label.setStyleSheet("background-color: green")

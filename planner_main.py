@@ -26,13 +26,13 @@ plt.switch_backend('Agg')
 
 class RobotCommsClient:
     #SIM_TYPE = "ASPEN"
-    SIM_TYPE = "GAZEBO"
-    ASPEN = 1
-    GAZEBO = 2
+    SIM_TYPE = "ASPEN"
+    ASPEN = "ASPEN"
+    GAZEBO = "GAZEBO"
     GAZEBO_STATE_TOPIC = '/jackal_velocity_controller/odom'
     GAZEBO_FRAME_ID = 'odom'
     ASPEN_STATE_TOPIC = '/tars/vicon_pose'
-    ASPEN_FRAME_ID = 'aspen_odom'
+    ASPEN_FRAME_ID = 'odom'#'aspen_odom'
 
     def __init__(self):
         if RobotCommsClient.SIM_TYPE == RobotCommsClient.ASPEN:
@@ -56,7 +56,7 @@ class RobotCommsClient:
 
     def send_waypoint(self, x, y, theta):
         goal = MoveBaseGoal()
-        goal.target_pose.header.frame_id = self.frame_id
+        goal.target_pose.header.frame_id = RobotCommsClient.ASPEN_FRAME_ID
         goal.target_pose.header.stamp = rospy.Time.now()
         goal.target_pose.pose.position.x = x
         goal.target_pose.pose.position.y = y
@@ -74,6 +74,31 @@ class RobotCommsClient:
         #   rospy.signal_shutdown("Action server not available!")
         #else:
         #   return self.move_base_srv.get_result()
+        return 1
+
+    def send_waypoint_and_wait(self, x, y, theta):
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = RobotCommsClient.ASPEN_FRAME_ID
+        goal.target_pose.header.stamp = rospy.Time.now()
+        goal.target_pose.pose.position.x = x
+        goal.target_pose.pose.position.y = y
+        q = quaternion_from_euler(0, 0, np.deg2rad(theta))
+        print('target ', q)
+        goal.target_pose.pose.orientation.x = q[0]
+        goal.target_pose.pose.orientation.y = q[1]
+        goal.target_pose.pose.orientation.z = q[2]
+        goal.target_pose.pose.orientation.w = q[3]
+
+        self.move_base_srv.send_goal(goal)
+        rospy.sleep(5)
+        wait = self.move_base_srv.wait_for_result()
+        if not wait:
+            rospy.logerr("Action server not available!")
+            rospy.signal_shutdown("Action server not available!")
+        else:
+            #rospy.logger("at waypoint")
+            print("at waypoint")
+            return self.move_base_srv.get_result()
         return 1
 
     def get_state(self):
@@ -198,6 +223,8 @@ class States:
             return "AT_GOAL"
         elif state == States.EVENT_TRIGGERED:
             return "EVENT_TRIGGERED"
+        elif state == States.STOPPED:
+            return "STOPPED"
 
 
 def distance(state1, state2):
@@ -222,7 +249,7 @@ def control_loop():
     print("initial state ", jackal_state)
 
     # List of goals - can be updated in realtime
-    goals = [[0,0], [0,5], [2,5], [-2,5]]
+    goals = [[0,0], [0,4], [2,4], [-2,4]]
     #goals = [[0, 0], [-4, 7], [-1, 8], [2, 8]]
 
     # Wait for the first goal from the UI
@@ -237,13 +264,13 @@ def control_loop():
     """
     Control loop
     """
-    for i in range(15):
+    for i in range(5):
         """
         Print out the current state
         """
-        print(States.toString(control_state))
-        print("State: ", jackal_state)
-        print("Target: ", next_waypoint)
+        #print(States.toString(control_state))
+        #print("State: ", jackal_state)
+        #print("Target: ", next_waypoint)
 
         """
         Check for any state updates
@@ -254,113 +281,144 @@ def control_loop():
         Check for any goal updates
         """
         goal_idx = ui_interface.check_new_goal(goal_idx)
-        if goal_idx == -1:
-            control_state = States.STOPPED
-        """
-        State Machine
-        """
-        if control_state == States.STOPPED:
-            """
-            Stop if we should stop
-            """
-            gazebo_interface.move_base_srv.cancelGoal()
+        waypoints = planner.rollout(1, jackal_state, goals[goal_idx], [], play_area)[0]
+        next_waypoint = [0,0]
+        ui_interface.send_map([waypoints], obstacle_list, jackal_state, goals[goal_idx], goals, play_area)
+        #gazebo_interface.send_waypoint(next_waypoint[0], next_waypoint[1], 0)
+        gazebo_interface.send_waypoint_and_wait(next_waypoint[0], next_waypoint[1], 0)
+        print("Next waypoint: ({:.2f}, {:.2f}), heading: {:.2f}".format(*next_waypoint, 0))
+        control_state = States.DRIVING
 
-        elif control_state == States.DRIVING:
-            """
-            If we are driving, then check if we reached the waypoint or the goal
-            """
-            if distance(next_waypoint, jackal_state) <= 0.5:
-                if distance(jackal_state, goals[goal_idx]) <= 0.5:
+        for i in range(20):
+            jackal_state = gazebo_interface.get_state()
+            goal_idx = ui_interface.check_new_goal(goal_idx)
+            print("Dist to goal: ", distance(next_waypoint, jackal_state))
+            print("Jackal state: ", jackal_state)
+            if goal_idx == -1:
+                gazebo_interface.move_base_srv.cancel_goal()
+                control_state = States.STOPPED
+                print(States.toString(control_state))
+                break
+            if distance(next_waypoint, jackal_state) <= 0.2:
+                if distance(jackal_state, goals[goal_idx]) <= 0.2:
                     control_state = States.AT_GOAL
                 else:
                     control_state = States.AT_WAYPOINT
+                print(States.toString(control_state))
+                gazebo_interface.move_base_srv.cancel_goal()
+                control_state = States.STOPPED
+                print(States.toString(control_state))
+                break
+            print(States.toString(control_state))
+            rospy.sleep(2)
 
-        elif control_state == States.AT_WAYPOINT:
-            """
-            If we are at the waypoint, then cancel the goal and plan to the next waypoint
-            """
-            gazebo_interface.move_base_srv.cancelGoal()
-            control_state = States.PLANNING
-
-        elif control_state == States.PLANNING:
-            """
-            Do a planning rollout, create a new image of the plan, publish the image to the UI
-            """
-            print("state ", jackal_state)
-            obstacles_to_plan_with = []
-            for o in obstacle_list:
-                if not outcome_assessment.checkInCircle(o[0], o[1], o[2], jackal_state[0], jackal_state[1]):
-                    obstacles_to_plan_with.append(o)
-            waypoints = planner.rollout(1, jackal_state, goals[goal_idx], obstacles_to_plan_with, play_area)[0]
-            next_waypoint = waypoints[1]
-            ui_interface.send_map([waypoints], obstacle_list, jackal_state, goals[goal_idx], goals, play_area)
-            print("Publishing new map")
-
-            if len(waypoints) >= 3:
-                next_next_waypoint = waypoints[2]
-                next_heading = math.atan2(next_waypoint[1] - next_next_waypoint[1], next_waypoint[0] - next_next_waypoint[0])
-                # TODO this heading isn't right
-                r = gazebo_interface.send_waypoint(next_waypoint[0], next_waypoint[1], next_heading)
-                print("Next waypoint: ({:.2f}, {:.2f}), heading: {:.2f}".format(*next_waypoint, next_heading))
-            elif len(waypoints) >= 2:
-                next_heading = np.deg2rad(90)
-                r = gazebo_interface.send_waypoint(next_waypoint[0], next_waypoint[1], next_heading)
-                print("Next waypoint: ({:.2f}, {:.2f}), heading: {:.2f}".format(*next_waypoint, next_heading))
-            else:
-                ui_interface.send_map([], obstacle_list, jackal_state, goals[goal_idx], goals, play_area)
-
-            control_state = States.DRIVING
-
-        elif control_state == States.AT_GOAL:
-            """
-            If we are at the goal, then stay there forever.. for now
-            """
-            pass
-        elif control_state == States.EVENT_TRIGGERED:
-            """
-            Do robot GOA calculations and publish to the UI
-            TODO implement this
-            TODO event triggering
-            """
-            topic = "sc"
-            scs = get_self_confidence(jackal_state, goals, obstacle_list, play_area)
-            datastring = f"{topic} {scs[0]} {scs[1]} {scs[2]}"
-            print("Publishing new self-confidence: ", datastring)
-            ui_interface.send_confidence(datastring)
-        '''
-        """
-        Do a planning rollout, create a new image of the plan, publish the image to the UI
-        """
-        print("state ", jackal_state)
-        obstacles_to_plan_with = []
-        for o in obstacle_list:
-            if not outcome_assessment.checkInCircle(o[0], o[1], o[2], jackal_state[0], jackal_state[1]):
-                obstacles_to_plan_with.append(o)
-        waypoints = planner.rollout(1, jackal_state, goals[goal_idx], obstacles_to_plan_with, play_area)[0]
-        ui_interface.send_map([waypoints], obstacle_list, jackal_state, goals[goal_idx], goals, play_area)
-        print("Publishing new map")
-        '''
-        """
-        TODO Publish the next waypoint to ROS
-        """
-        '''
-        curr_waypoint = waypoints[1]
-        if len(waypoints) >= 3:
-            next_waypoint = waypoints[1]
-            next_next_waypoint = waypoints[2]
-            next_heading = math.atan2(next_waypoint[1] - next_next_waypoint[1], next_waypoint[0] - next_next_waypoint[0])
-            # TODO this heading isn't right
-            r = gazebo_interface.send_waypoint(0,0,0)#next_waypoint[0], next_waypoint[1], next_heading)
-            print("Next waypoint: ({:.2f}, {:.2f}), heading: {:.2f}".format(*next_waypoint, next_heading))
-        elif len(waypoints) >= 2:
-            next_waypoint = waypoints[1]
-            next_heading = np.deg2rad(90)
-            r = gazebo_interface.send_waypoint(0,0,0)#next_waypoint[0], next_waypoint[1], next_heading)
-            print("Next waypoint: ({:.2f}, {:.2f}), heading: {:.2f}".format(*next_waypoint, next_heading))
-        else:
-            ui_interface.send_map([], obstacle_list, jackal_state, goals[goal_idx], goals, play_area)
-        '''
+        #"""
+        #State Machine
+        #"""
+        #if control_state == States.STOPPED:
+        #    """
+        #    Stop if we should stop
+        #    """
+        #    gazebo_interface.move_base_srv.cancel_goal()
+        #    control_state = States.AT_GOAL
+        #
+        #elif control_state == States.DRIVING:
+        #    """
+        #    If we are driving, then check if we reached the waypoint or the goal
+        #    """
+        #    if distance(next_waypoint, jackal_state) <= 0.5:
+        ##        if distance(jackal_state, goals[goal_idx]) <= 0.5:
+        #           control_state = States.AT_GOAL
+        #       else:
+        #            control_state = States.AT_WAYPOINT
+        #
+        #elif control_state == States.AT_WAYPOINT:
+        #    """
+        #    If we are at the waypoint, then cancel the goal and plan to the next waypoint
+        #    """
+        #    gazebo_interface.move_base_srv.cancel_goal()
+        #    control_state = States.PLANNING
+        #
+        #elif control_state == States.PLANNING:
+        #    """
+        #    Do a planning rollout, create a new image of the plan, publish the image to the UI
+        #    """
+        #    print("state ", jackal_state)
+        #    obstacles_to_plan_with = []
+        #    for o in obstacle_list:
+        #        if not outcome_assessment.checkInCircle(o[0], o[1], o[2], jackal_state[0], jackal_state[1]):
+        #            obstacles_to_plan_with.append(o)
+        #    waypoints = planner.rollout(1, jackal_state, goals[goal_idx], obstacles_to_plan_with, play_area)[0]
+        #    next_waypoint = waypoints[1]
+        #    ui_interface.send_map([waypoints], obstacle_list, jackal_state, goals[goal_idx], goals, play_area)
+        #    print("Publishing new map")
+        #
+        #    if len(waypoints) >= 3:
+        #        next_next_waypoint = waypoints[2]
+        #        next_heading = math.atan2(next_waypoint[1] - next_next_waypoint[1], next_waypoint[0] - next_next_waypoint[0])
+        #        # TODO this heading isn't right
+        #        r = gazebo_interface.send_waypoint(0,4, next_heading)
+        #        print("Next waypoint: ({:.2f}, {:.2f}), heading: {:.2f}".format(*next_waypoint, next_heading))
+        #    elif len(waypoints) >= 2:
+        #        next_heading = np.deg2rad(90)
+        #        r = gazebo_interface.send_waypoint(0,4, next_heading)
+        #        print("Next waypoint: ({:.2f}, {:.2f}), heading: {:.2f}".format(*next_waypoint, next_heading))
+        #    else:
+        #        ui_interface.send_map([], obstacle_list, jackal_state, goals[goal_idx], goals, play_area)
+        #
+        #    control_state = States.DRIVING
+        #
+        #if control_state == States.AT_GOAL:
+        #    """
+        #    If we are at the goal, then stay there forever.. for now
+        #    """
+        #    pass
+        #elif control_state == States.EVENT_TRIGGERED:
+        #    """
+        #    Do robot GOA calculations and publish to the UI
+        #    TODO implement this
+        #    TODO event triggering
+        #    """
+        #    topic = "sc"
+        #    scs = get_self_confidence(jackal_state, goals, obstacle_list, play_area)
+        #    datastring = f"{topic} {scs[0]} {scs[1]} {scs[2]}"
+        #    print("Publishing new self-confidence: ", datastring)
+        #    ui_interface.send_confidence(datastring)
+        #'''
+        #"""
+        #Do a planning rollout, create a new image of the plan, publish the image to the UI
+        #"""
+        #print("state ", jackal_state)
+        #obstacles_to_plan_with = []
+        #for o in obstacle_list:
+        #    if not outcome_assessment.checkInCircle(o[0], o[1], o[2], jackal_state[0], jackal_state[1]):
+        #        obstacles_to_plan_with.append(o)
+        #waypoints = planner.rollout(1, jackal_state, goals[goal_idx], obstacles_to_plan_with, play_area)[0]
+        #ui_interface.send_map([waypoints], obstacle_list, jackal_state, goals[goal_idx], goals, play_area)
+        #print("Publishing new map")
+        #'''
+        #"""
+        #TODO Publish the next waypoint to ROS
+        #"""
+        #'''
+        #curr_waypoint = waypoints[1]
+        #if len(waypoints) >= 3:
+        #    next_waypoint = waypoints[1]
+        #    next_next_waypoint = waypoints[2]
+        #    next_heading = math.atan2(next_waypoint[1] - next_next_waypoint[1], next_waypoint[0] - next_next_waypoint[0])
+        #    # TODO this heading isn't right
+        #    r = gazebo_interface.send_waypoint(0,0,0)#next_waypoint[0], next_waypoint[1], next_heading)
+        #    print("Next waypoint: ({:.2f}, {:.2f}), heading: {:.2f}".format(*next_waypoint, next_heading))
+        #elif len(waypoints) >= 2:
+        #    next_waypoint = waypoints[1]
+        #    next_heading = np.deg2rad(90)
+        #    r = gazebo_interface.send_waypoint(0,0,0)#next_waypoint[0], next_waypoint[1], next_heading)
+        #    print("Next waypoint: ({:.2f}, {:.2f}), heading: {:.2f}".format(*next_waypoint, next_heading))
+        #else:
+        #    ui_interface.send_map([], obstacle_list, jackal_state, goals[goal_idx], goals, play_area)
+        #'''
         rospy.sleep(2)
+        break
     return 0
 
 

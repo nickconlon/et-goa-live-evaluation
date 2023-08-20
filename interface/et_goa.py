@@ -109,7 +109,7 @@ class et_goa:
         self.counter = 0
         self.data = preprocessed
 
-    def get_si(self, actual_x, actual_y, actual_obs, t=0.0, min_std=2):
+    def get_si(self, actual_x, actual_y, actual_obs, t=0.0, min_std=1.5):
         if self.counter >= len(self.data):
             return 0.0, None, None
         d_idx = min_diff_pos_sorted(self.data[:, 0], t)

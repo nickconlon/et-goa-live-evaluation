@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1004</width>
-    <height>533</height>
+    <height>521</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -68,22 +68,22 @@
      <string>Auto drive</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="process_et_data">
+   <widget class="QPushButton" name="go_home_button">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>410</y>
-      <width>201</width>
-      <height>51</height>
+      <y>360</y>
+      <width>111</width>
+      <height>31</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>18</pointsize>
+      <pointsize>13</pointsize>
      </font>
     </property>
     <property name="text">
-     <string>Process ET data</string>
+     <string>Go home</string>
     </property>
    </widget>
    <widget class="QLabel" name="goa_display">
@@ -160,18 +160,18 @@
      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
     </property>
    </widget>
-   <widget class="QPushButton" name="write_data">
+   <widget class="QPushButton" name="write_data_button">
     <property name="geometry">
      <rect>
-      <x>230</x>
-      <y>410</y>
-      <width>151</width>
-      <height>51</height>
+      <x>20</x>
+      <y>400</y>
+      <width>111</width>
+      <height>31</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>18</pointsize>
+      <pointsize>13</pointsize>
      </font>
     </property>
     <property name="text">
@@ -235,15 +235,15 @@
    <widget class="QPushButton" name="end_sim">
     <property name="geometry">
      <rect>
-      <x>370</x>
-      <y>410</y>
-      <width>151</width>
-      <height>51</height>
+      <x>20</x>
+      <y>440</y>
+      <width>111</width>
+      <height>31</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>18</pointsize>
+      <pointsize>13</pointsize>
      </font>
     </property>
     <property name="text">
@@ -540,7 +540,7 @@
      <enum>QFrame::Box</enum>
     </property>
     <property name="text">
-     <string>Machine Self-Confience Assessments</string>
+     <string>Robot Self-Confience Assessments</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignHCenter|Qt::AlignTop</set>
@@ -566,7 +566,7 @@
      <enum>QFrame::Box</enum>
     </property>
     <property name="text">
-     <string>Robot Control</string>
+     <string>Robot State and Control</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignHCenter|Qt::AlignTop</set>
@@ -665,16 +665,52 @@
      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
     </property>
    </widget>
+   <widget class="QPushButton" name="famsec_toggle_button">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>360</y>
+      <width>111</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>FaMSeC on</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="et_goa_toggle_button">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>400</y>
+      <width>111</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Triggering on</string>
+    </property>
+   </widget>
    <zorder>confidence_panel_label_2</zorder>
    <zorder>confidence_panel_label</zorder>
    <zorder>run_goa</zorder>
    <zorder>stop_robot</zorder>
    <zorder>start_robot</zorder>
-   <zorder>process_et_data</zorder>
+   <zorder>go_home_button</zorder>
    <zorder>goa_display</zorder>
    <zorder>et_display</zorder>
    <zorder>state_display</zorder>
-   <zorder>write_data</zorder>
+   <zorder>write_data_button</zorder>
    <zorder>update_goa_value</zorder>
    <zorder>mq_label</zorder>
    <zorder>update_goa</zorder>
@@ -698,6 +734,8 @@
    <zorder>expected_oa_label</zorder>
    <zorder>actual_outcome_display</zorder>
    <zorder>oa_label</zorder>
+   <zorder>famsec_toggle_button</zorder>
+   <zorder>et_goa_toggle_button</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

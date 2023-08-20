@@ -36,7 +36,7 @@ class WaypointThread(QtCore.QThread):
     def run(self):
         t1 = time.time()
         gtw = go_to_waypoint.WaypointFollower()
-        print('starting video thread')
+        print('starting waypoint thread')
         _xs = self.waypoints[:,0]
         _ys = self.waypoints[:,1]
         for _x, _y in zip(_xs, _ys):
@@ -229,20 +229,29 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.update_goa.clicked.connect(self.update_goa_callback)
         self.stop_robot.clicked.connect(self.stop_robot_callback)
         self.start_robot.clicked.connect(self.start_robot_callback)
+        self.go_home_button.clicked.connect(self.go_home_callback)
+        self.famsec_toggle_button.clicked.connect(self.toggle_FaMSeC_callback)
+        self.et_goa_toggle_button.clicked.connect(self.toggle_triggering_callback)
 
         self.wp_thread = None
 
         # parameters and storage for runtime stuff
-        self.goa_threshold = 61
-        self.goal = [3, 6]
+        self.goa_threshold = 30
+        self.goal = [-1, -1]
         self.pose = [1.5, 1.5, 0.0001]
         self.orientation = [0, 0, 1, 0]
         self.et_counter = 0
         self.pose_counter = 0
-        self.predx = 0
-        self.predy = 0
+        self.predx = -1
+        self.predy = -1
         self.et_object = et_goa()
         self.waypoints = [] #np.array([[3, 1],[2.5, 4],[3, 6]])
+
+        # 0 => off, 1 => on
+        self.FaMSeC_state = 0
+        self.ET_GOA_state = 0
+
+        self.delta = 0.05 # TODO triggering threshold
 
         self.update_goa_value.setText(str(self.goa_threshold))
         self.update_map_callback()
@@ -258,8 +267,27 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.et_object.set_pred_paths(pred_paths)
         self.et_object.preprocess()
 
-        self.solver_quality_callback()
-        self.experience_callback()
+
+    def go_home_callback(self):
+        self.goal = [2, 1.5]
+        self.generate_plan_callback()
+        #self.start_robot_callback()
+        self.goal = [2, 2]
+        #self.start_robot_callback()
+
+    def toggle_FaMSeC_callback(self):
+        self.FaMSeC_state = not self.FaMSeC_state
+        if self.FaMSeC_state:
+            self.solver_quality_callback()
+            self.experience_callback()
+            self.outcome_assessment_callback()
+        else:
+            # TODO turn of the FaMSeC stuff
+            pass
+
+    def toggle_triggering_callback(self):
+        self.ET_GOA_state = not self.ET_GOA_state
+
 
     def stop_robot_callback(self):
         if self.wp_thread is not None:
@@ -274,8 +302,8 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
 
     def start_robot_callback(self):
         self.wp_thread = WaypointThread()
-        self.wp_thread.xx = self.goal[0]
-        self.wp_thread.yy = self.goal[1]
+        #self.wp_thread.xx = self.goal[0]
+        #self.wp_thread.yy = self.goal[1]
         self.wp_thread.waypoints = self.waypoints
         self.wp_thread.mq_emit.connect(self.model_quality_callback)
         self.wp_thread.done_emit.connect(self.robot_graceful_stop)
@@ -327,7 +355,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
 
     def run_assessment_callback(self):
         try:
-            if len(self.waypoints) > 0:
+            if len(self.waypoints) > 0 and self.FaMSeC_state:
                 print('doing rollout')
                 self.rollout = RolloutThread()
                 self.rollout.pose = self.pose
@@ -342,9 +370,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
 
     def update_goa_callback(self):
         try:
-            self.thread = None
-            self.rollout = None
-            if len(self.waypoints) > 0:
+            if len(self.waypoints) > 0 and self.FaMSeC_state:
                 self.goa_threshold = float(self.update_goa_value.text())
                 pred_paths = ['/data/webots/rollout{}_state.npy'.format(x) for x in np.arange(0, 10)]
                 self.et_object.set_pred_paths(pred_paths)
@@ -353,6 +379,8 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
                 label, color = assessment_to_label(goa)
                 self.goa_display.setText(label)
                 self.goa_display.setStyleSheet('background-color: {}'.format(color))
+                self.et_display.setText('')
+                self.et_display.setStyleSheet('background-color: {}'.format('light gray'))
         except Exception as e:
             traceback.print_exc()
 
@@ -390,22 +418,36 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
             traceback.print_exc()
 
     def model_quality_callback(self, msg):
-        if self.et_counter % self.et_object.sample_rate == 0:
+        if self.et_counter % self.et_object.sample_rate == 0 and self.FaMSeC_state:
             si, self.predx, self.predy = msg
             if si >= 0 and self.wp_thread is not None:
                 label, color = assessment_to_label(si)
                 self.et_display.setText(label)
                 self.et_display.setStyleSheet('background-color: {}'.format(color))
+                if self.ET_GOA_state and si < self.delta:
+                    self.stop_robot_callback()
+                    self.generate_plan_callback()
+                    self.outcome_assessment_callback()
+
         self.et_counter += 1
 
+    def outcome_assessment_callback(self):
+        label = 'N/A'
+        self.goa_display.setText(label)
+        self.goa_display.setStyleSheet('background-color: {}'.format('light gray'))
+        self.et_display.setText(label)
+        self.et_display.setStyleSheet('background-color: {}'.format('light gray'))
+
     def solver_quality_callback(self):
-        label, color = assessment_to_label(1)
-        self.sq_display.setText('Not implemented')
-        self.sq_display.setStyleSheet('background-color: {}'.format('blue'))
+        if self.FaMSeC_state:
+            label, color = assessment_to_label(1)
+            self.sq_display.setText('Not implemented')
+            self.sq_display.setStyleSheet('background-color: {}'.format('blue'))
     def experience_callback(self):
-        label, color = assessment_to_label(0.5)
-        self.exp_display.setText('Not implemented')
-        self.exp_display.setStyleSheet('background-color: {}'.format('blue'))
+        if self.FaMSeC_state:
+            label, color = assessment_to_label(0.5)
+            self.exp_display.setText('Not implemented')
+            self.exp_display.setStyleSheet('background-color: {}'.format('blue'))
 
 
 def plot_map(position, goal, waypoints, predx=None, predy=None):

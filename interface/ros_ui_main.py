@@ -281,12 +281,16 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
             self.solver_quality_callback()
             self.experience_callback()
             self.outcome_assessment_callback()
+            self.famsec_toggle_button.setStyleSheet('background-color: {}'.format('green'))
         else:
-            # TODO turn of the FaMSeC stuff
-            pass
+           self.famsec_toggle_button.setStyleSheet('background-color: {}'.format('light gray'))
 
     def toggle_triggering_callback(self):
         self.ET_GOA_state = not self.ET_GOA_state
+        if self.ET_GOA_state:
+            self.et_goa_toggle_button.setStyleSheet('background-color: {}'.format('green'))
+        else:
+            self.et_goa_toggle_button.setStyleSheet('background-color: {}'.format('light gray'))
 
 
     def stop_robot_callback(self):
@@ -299,8 +303,10 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
             self.wp_thread.wait()
             self.wp_thread = None
             self.waypoints = []
+        self.start_robot.setStyleSheet('background-color: {}'.format('light gray'))
 
     def start_robot_callback(self):
+        self.start_robot.setStyleSheet('background-color: {}'.format('green'))
         self.wp_thread = WaypointThread()
         #self.wp_thread.xx = self.goal[0]
         #self.wp_thread.yy = self.goal[1]
@@ -356,6 +362,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
     def run_assessment_callback(self):
         try:
             if len(self.waypoints) > 0 and self.FaMSeC_state:
+                self.run_goa.setStyleSheet('background-color: {}'.format('green'))
                 print('doing rollout')
                 self.rollout = RolloutThread()
                 self.rollout.pose = self.pose
@@ -365,6 +372,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
                 self.rollout.finished.connect(self.update_goa_callback)
                 self.rollout.start()
                 #self.update_goa_callback()
+
         except Exception as e:
             traceback.print_exc()
 
@@ -381,6 +389,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
                 self.goa_display.setStyleSheet('background-color: {}'.format(color))
                 self.et_display.setText('')
                 self.et_display.setStyleSheet('background-color: {}'.format('light gray'))
+                self.run_goa.setStyleSheet('background-color: {}'.format('light grey'))
         except Exception as e:
             traceback.print_exc()
 
@@ -395,9 +404,11 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
 
     def generate_plan_callback(self):
         try:
+            self.generate_plan_button.setStyleSheet('background-color: {}'.format('green'))
             self.waypoints = plan(self.goal, self.pose, [rrt.Obstacle(rrt.Obstacle.circle, [2.5, 2.5], [0.5], '1')])
             print(self.waypoints)
             self.update_map_callback()
+            self.generate_plan_button.setStyleSheet('background-color: {}'.format('light grey'))
         except Exception as e:
             traceback.print_exc()
 

@@ -28,6 +28,7 @@ class WaypointThread(QtCore.QThread):
     mq_emit = QtCore.pyqtSignal(object)
     task_time_emit = QtCore.pyqtSignal(int)
     done_emit = QtCore.pyqtSignal()
+    waypoint_emit = QtCore.pyqtSignal(int)
 
     waypoints = []
     should_run = True
@@ -40,7 +41,10 @@ class WaypointThread(QtCore.QThread):
         print('starting waypoint thread')
         _xs = self.waypoints[:,0]
         _ys = self.waypoints[:,1]
+        waypoint_counter = 0
         for _x, _y in zip(_xs, _ys):
+            self.waypoint_emit.emit(waypoint_counter)
+            waypoint_counter += 1
             if not self.should_run:
                 break
             print('going to wp {}, {}'.format(_x, _y))
@@ -67,6 +71,7 @@ class WaypointThread(QtCore.QThread):
         print('task time', abs(t2-t1))
         self.done_emit.emit()
         print('exiting waypoint thread')
+
 def extract_msg(data):
     """
     Extract the same fields from different messages
@@ -236,6 +241,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.write_data_button.clicked.connect(self.write_data_callback)
 
         self.wp_thread = None
+        self.rollout_thread = None
 
         # parameters and storage for runtime stuff
         self.goa_threshold = 30
@@ -247,10 +253,11 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.predx = -1
         self.predy = -1
         self.et_object = et_goa()
-        self.waypoints = [] #np.array([[3, 1],[2.5, 4],[3, 6]])
+        self.waypoints = []
 
         self.model_quality_over_time = []
         self.outcome_assessment_over_time = []
+        self.orientation_over_time = []
         self.time_over_time = []
         self.pose_over_time = []
 
@@ -260,22 +267,27 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
 
         self.outcome_assessment = -1
         self.model_quality_assessment = -1
+        self.current_time = -1
+        self.current_waypoint = 0
 
         self.delta = 0.05 # TODO triggering threshold
 
         self.update_goa_value.setText(str(self.goa_threshold))
         self.update_map_callback()
 
-        #self.grab_odom = rospy.Subscriber('/gazebo/model_states', ModelStates,
-        #                                  self.pose_callback)
         self.grab_odom = rospy.Subscriber('/tars/vrpn_client_node/cohrint_tars/pose', PoseStamped, self.pose_callback)
 
         self.start_time = time.time()
-        self.x = 0
-        self.y = 0
+        #self.x = 0
+        #self.y = 0
         pred_paths = ['/data/webots/rollout{}_state.npy'.format(x) for x in np.arange(0, 10)]
         self.et_object.set_pred_paths(pred_paths)
         self.et_object.preprocess()
+
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.update_timer_callback)
+        self.timer.setInterval(10)
+        self.timer.start()
 
     def write_data_callback(self):
         filename = 'data.csv'
@@ -305,7 +317,15 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
             self.outcome_assessment_callback()
             self.famsec_toggle_button.setStyleSheet('background-color: {}'.format('green'))
         else:
-           self.famsec_toggle_button.setStyleSheet('background-color: {}'.format('light gray'))
+            self.sq_display.setStyleSheet('background-color: {}'.format('light gray'))
+            self.exp_display.setStyleSheet('background-color: {}'.format('light gray'))
+            self.goa_display.setStyleSheet('background-color: {}'.format('light gray'))
+            self.et_display.setStyleSheet('background-color: {}'.format('light gray'))
+            self.goa_display.setText('')
+            self.sq_display.setText('')
+            self.exp_display.setText('')
+            self.et_display.setText('')
+            self.famsec_toggle_button.setStyleSheet('background-color: {}'.format('light gray'))
 
     def toggle_triggering_callback(self):
         self.ET_GOA_state = not self.ET_GOA_state
@@ -335,6 +355,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.wp_thread.mq_emit.connect(self.model_quality_callback)
         self.wp_thread.done_emit.connect(self.robot_graceful_stop)
         self.wp_thread.task_time_emit.connect(self.task_time_callback)
+        self.wp_thread.waypoint_emit.connect(self.waypoint_callback)
         self.wp_thread.start()
 
     def task_time_callback(self, msg):
@@ -343,11 +364,29 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         except Exception as e:
             traceback.print_exc()
 
+    def update_timer_callback(self):
+        try:
+            t = time.time() - self.start_time
+            pos_str = "({:.1f}, {:.1f}, {:.1f})".format(*self.pose)
+            orient_str = "{:.1f} degrees".format(np.rad2deg(self.orientation[-1]))
+            time_str = "{:.2f} seconds".format(t)
+            self.position_display.setText(pos_str)
+            self.orientation_display.setText(orient_str)
+            self.time_display.setText(time_str)
+            self.update_map_callback()
+
+            if len(self.waypoints) > 0:
+                wp_x, wp_y = self.waypoints[self.current_waypoint]
+            else:
+                wp_x, wp_y = 0, 0
+            wp_str = "({:.1f}, {:.1f})".format(wp_x, wp_y)
+            self.next_waypoint_display.setText(wp_str)
+        except Exception as e:
+            traceback.print_exc()
+
     def waypoint_callback(self, msg):
         try:
-            wp_str = ','.join([str(x) for x in msg])
-            print('Waypoint str', wp_str)
-            self.next_waypoint_display.setText(wp_str)
+            self.current_waypoint = msg
         except Exception as e:
             traceback.print_exc()
 
@@ -363,18 +402,9 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
                 pose, angle = extract_msg(msg)
                 x, y, z = pose
                 rx, ry, rz = angle
-                t = time.time()-self.start_time
-                pos_str = "({:.2f}, {:.2f}, {:.2f})".format(x, y, z)
-                orient_str = "({:.2f}, {:.2f}, {:.2f}, {:.2f})".format(rx, ry, rz, 1)
-                #print('{} pose '.format(self.pose_counter), pos_str)
-                time_str = "{:.2f}".format(t)
-                self.position_display.setText(pos_str)
-                self.orientation_display.setText(orient_str)
-                self.time_display.setText(time_str)
+                self.current_time = time.time()-self.start_time
                 self.pose = np.array([x, y, z])
                 self.orientation = np.array([0, 0, 1, rz])
-                #if self.et_counter % self.et_object.sample_rate == 0:
-                self.update_map_callback()
                 app.processEvents()
             except Exception as e:
                 traceback.print_exc()

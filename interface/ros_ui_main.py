@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QMainWindow, QApplication
 from PyQt5 import QtCore, QtGui
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import pandas as pd
 
 import comms as comms
 from et_goa import et_goa
@@ -232,6 +233,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.go_home_button.clicked.connect(self.go_home_callback)
         self.famsec_toggle_button.clicked.connect(self.toggle_FaMSeC_callback)
         self.et_goa_toggle_button.clicked.connect(self.toggle_triggering_callback)
+        self.write_data_button.clicked.connect(self.write_data_callback)
 
         self.wp_thread = None
 
@@ -247,9 +249,17 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.et_object = et_goa()
         self.waypoints = [] #np.array([[3, 1],[2.5, 4],[3, 6]])
 
+        self.model_quality_over_time = []
+        self.outcome_assessment_over_time = []
+        self.time_over_time = []
+        self.pose_over_time = []
+
         # 0 => off, 1 => on
         self.FaMSeC_state = 0
         self.ET_GOA_state = 0
+
+        self.outcome_assessment = -1
+        self.model_quality_assessment = -1
 
         self.delta = 0.05 # TODO triggering threshold
 
@@ -267,8 +277,20 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.et_object.set_pred_paths(pred_paths)
         self.et_object.preprocess()
 
+    def write_data_callback(self):
+        filename = 'data.csv'
+        data = {'t':  self.time_over_time,
+                'Xm': self.model_quality_over_time,
+                'Xo': self.outcome_assessment_over_time,
+                'x': [p[0] for p in self.pose_over_time],
+                'y': [p[1] for p in self.pose_over_time],
+                'z': [p[2] for p in self.pose_over_time],
+                }
+        pd.DataFrame(data).to_csv(filename, index=False)
+        pass
 
     def go_home_callback(self):
+        # TODO test this before pushing
         self.goal = [2, 1.5]
         self.generate_plan_callback()
         #self.start_robot_callback()
@@ -291,7 +313,6 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
             self.et_goa_toggle_button.setStyleSheet('background-color: {}'.format('green'))
         else:
             self.et_goa_toggle_button.setStyleSheet('background-color: {}'.format('light gray'))
-
 
     def stop_robot_callback(self):
         if self.wp_thread is not None:
@@ -358,7 +379,6 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
             except Exception as e:
                 traceback.print_exc()
 
-
     def run_assessment_callback(self):
         try:
             if len(self.waypoints) > 0 and self.FaMSeC_state:
@@ -385,6 +405,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
                 self.et_object.preprocess()
                 goa = self.et_object.get_goa_times(self.goa_threshold, 0)
                 label, color = assessment_to_label(goa)
+                self.outcome_assessment = goa
                 self.goa_display.setText(label)
                 self.goa_display.setStyleSheet('background-color: {}'.format(color))
                 self.et_display.setText('')
@@ -432,9 +453,18 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         if self.et_counter % self.et_object.sample_rate == 0 and self.FaMSeC_state:
             si, self.predx, self.predy = msg
             if si >= 0 and self.wp_thread is not None:
+                self.model_quality_assessment = si
                 label, color = assessment_to_label(si)
                 self.et_display.setText(label)
                 self.et_display.setStyleSheet('background-color: {}'.format(color))
+
+                # Save off the machine self-confidence assessments
+                self.model_quality_over_time.append(self.model_quality_assessment)
+                self.outcome_assessment_over_time.append(self.outcome_assessment)
+                self.time_over_time.append(abs(time.time()-self.start_time))
+                self.pose_over_time.append([p for p in self.pose])
+                self.orientation_over_time.append([p for p in self.orientation])
+
                 if self.ET_GOA_state and si < self.delta:
                     self.stop_robot_callback()
                     self.generate_plan_callback()

@@ -32,12 +32,12 @@
      <string>Run new Outcome Assessment</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="stop_robot">
+   <widget class="QPushButton" name="stop_robot_button">
     <property name="geometry">
      <rect>
-      <x>150</x>
+      <x>110</x>
       <y>260</y>
-      <width>111</width>
+      <width>71</width>
       <height>31</height>
      </rect>
     </property>
@@ -50,12 +50,12 @@
      <string>Stop</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="start_robot">
+   <widget class="QPushButton" name="start_robot_button">
     <property name="geometry">
      <rect>
       <x>20</x>
       <y>260</y>
-      <width>111</width>
+      <width>71</width>
       <height>31</height>
      </rect>
     </property>
@@ -65,7 +65,7 @@
      </font>
     </property>
     <property name="text">
-     <string>Auto drive</string>
+     <string>Auto</string>
     </property>
    </widget>
    <widget class="QPushButton" name="go_home_button">
@@ -163,8 +163,8 @@
    <widget class="QPushButton" name="write_data_button">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>400</y>
+      <x>380</x>
+      <y>440</y>
       <width>111</width>
       <height>31</height>
      </rect>
@@ -686,8 +686,8 @@
    <widget class="QPushButton" name="et_goa_toggle_button">
     <property name="geometry">
      <rect>
-      <x>140</x>
-      <y>400</y>
+      <x>260</x>
+      <y>360</y>
       <width>111</width>
       <height>31</height>
      </rect>
@@ -701,11 +701,83 @@
      <string>Triggering on</string>
     </property>
    </widget>
+   <widget class="QPushButton" name="test_add_obstacle_button">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>440</y>
+      <width>111</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Test obstacle</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="test_trigger_goa_button">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>440</y>
+      <width>111</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Test Trigger</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="toggle_record_button">
+    <property name="geometry">
+     <rect>
+      <x>380</x>
+      <y>360</y>
+      <width>111</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Record on</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="teleop_robot_button">
+    <property name="geometry">
+     <rect>
+      <x>200</x>
+      <y>260</y>
+      <width>61</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Telop</string>
+    </property>
+   </widget>
    <zorder>confidence_panel_label_2</zorder>
    <zorder>confidence_panel_label</zorder>
    <zorder>run_goa</zorder>
-   <zorder>stop_robot</zorder>
-   <zorder>start_robot</zorder>
+   <zorder>stop_robot_button</zorder>
+   <zorder>start_robot_button</zorder>
    <zorder>go_home_button</zorder>
    <zorder>goa_display</zorder>
    <zorder>et_display</zorder>
@@ -736,6 +808,10 @@
    <zorder>oa_label</zorder>
    <zorder>famsec_toggle_button</zorder>
    <zorder>et_goa_toggle_button</zorder>
+   <zorder>test_add_obstacle_button</zorder>
+   <zorder>test_trigger_goa_button</zorder>
+   <zorder>toggle_record_button</zorder>
+   <zorder>teleop_robot_button</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

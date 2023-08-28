@@ -1,3 +1,4 @@
+import json
 import time
 import traceback
 import sys
@@ -13,6 +14,7 @@ import video_ui
 import rospy
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
+from std_msgs.msg import String
 
 class VideoThread(QtCore.QThread):
     image_emit = QtCore.pyqtSignal(object)
@@ -40,14 +42,13 @@ class myMainWindow(QMainWindow, video_ui.Ui_MainWindow):
         self.setupUi(self)
         self.video_label.setPixmap(QtGui.QPixmap("./nature.jpg"))
 
-        self.grab_image = rospy.Subscriber('/image_topic', Image, self.receive_image_callback)
+        self.grab_image = rospy.Subscriber('/goa/image_topic', Image, self.receive_image_callback)
+        self.signal_pub = rospy.Publisher('/goa/image_signal', String, queue_size=10)
 
-        #self.thread = VideoThread()
-        #self.thread.image_emit.connect(self.update_image_callback)
-        #self.thread.start()
         self.bridge = CvBridge()
         self.dict_aruco = cv.aruco.Dictionary_get(cv.aruco.DICT_4X4_50)
         self.parameters = cv.aruco.DetectorParameters_create()
+        self.id_for_signal = 1
 
     def receive_image_callback(self, msg):
         cv_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
@@ -66,6 +67,9 @@ class myMainWindow(QMainWindow, video_ui.Ui_MainWindow):
         qImg = QtGui.QImage(img.data, width, height, bytesPerLine, QtGui.QImage.Format_RGB888)
         QtGui.QPixmap.fromImage(qImg)
         self.video_label.setPixmap(QtGui.QPixmap.fromImage(qImg))
+        if ids is not None:
+            self.signal_pub.publish('ID_SIGNAL')
+
 
 try:
     app = QApplication(sys.argv)

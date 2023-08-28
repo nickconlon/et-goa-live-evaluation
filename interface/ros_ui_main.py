@@ -21,6 +21,7 @@ from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry  # oOdometry messages
 from tf.transformations import euler_from_quaternion  # Quaternion conversions
 from gazebo_msgs.msg import ModelStates
+from std_msgs.msg import String
 import go_to_waypoint
 
 class WaypointThread(QtCore.QThread):
@@ -32,6 +33,7 @@ class WaypointThread(QtCore.QThread):
 
     waypoints = []
     should_run = True
+    should_drive = True
     #xx = 2.5
     #yy = 4
 
@@ -56,7 +58,7 @@ class WaypointThread(QtCore.QThread):
             while gtw.dist_err > 0.1 and self.should_run:
                 gtw.do_et = True
                 self.mq_emit.emit([gtw.MQ, gtw.predx, gtw.predy])
-                if gtw.pose_cmd_vel is not None:
+                if gtw.pose_cmd_vel is not None and self.should_drive:
                     vel = Twist()
                     vel.linear.x = gtw.pose_cmd_vel
                     vel.angular.z = gtw.rot_cmd_vel
@@ -185,12 +187,13 @@ class RolloutThread(QtCore.QThread):
     pose = None
     orientation = None
     goal = None
+    known_obstacles = None
     waypoints = []
 
     def run(self):
         print('starting rollout thread')
         try:
-            comms.do_rollout(self.pose, self.orientation, self.goal, 0, [], self.waypoints)
+            comms.do_rollout(self.pose, self.orientation, self.goal, 0, self.known_obstacles, self.waypoints)
             self.finished.emit()
         except Exception as e:
             traceback.print_exc()
@@ -210,7 +213,7 @@ def plan(goal_pos, robot_pos, obstacle_pos, ret='all'):
     # [ymin ymax], [xmin, xmax]
     bounds = np.array([[1, 10], [1, 5]])
 
-    waypoints = rrt.plan_rrt_webots(starting_point, rrt_goal, obstacle_pos, bounds, visualize_route=False)
+    waypoints = rrt.plan_rrt_webots(starting_point, rrt_goal, obstacle_pos, bounds, visualize_route=True)
     if len(waypoints) == 0:
         _ret_waypoint = []
     elif ret == 'next':
@@ -223,6 +226,10 @@ def plan(goal_pos, robot_pos, obstacle_pos, ret='all'):
     print("next waypoint " + str(_ret_waypoint))
     return _ret_waypoint
 
+class ControlState:
+    STOPPED = 'Stopped'
+    AUTONOMY = 'Autonomy'
+    HUMAN = 'Human'
 
 class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
     def __init__(self):
@@ -233,17 +240,23 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.update_goal_button.clicked.connect(self.update_goal_callback)
         self.run_goa.clicked.connect(self.run_assessment_callback)
         self.update_goa.clicked.connect(self.update_goa_callback)
-        self.stop_robot.clicked.connect(self.stop_robot_callback)
-        self.start_robot.clicked.connect(self.start_robot_callback)
+        self.stop_robot_button.clicked.connect(self.stop_robot_callback)
+        self.start_robot_button.clicked.connect(self.start_robot_callback)
         self.go_home_button.clicked.connect(self.go_home_callback)
         self.famsec_toggle_button.clicked.connect(self.toggle_FaMSeC_callback)
         self.et_goa_toggle_button.clicked.connect(self.toggle_triggering_callback)
         self.write_data_button.clicked.connect(self.write_data_callback)
+        self.toggle_record_button.clicked.connect(self.toggle_record_callback)
+        self.teleop_robot_button.clicked.connect(self.teleop_callback)
+
+        self.test_add_obstacle_button.clicked.connect(self.test_add_obstacle_callback)
+        self.test_trigger_goa_button.clicked.connect(self.test_trigger_goa_callback)
 
         self.wp_thread = None
         self.rollout_thread = None
 
         # parameters and storage for runtime stuff
+        self.known_obstacles = {}
         self.goa_threshold = 30
         self.goal = [-1, -1]
         self.pose = [1.5, 1.5, 0.0001]
@@ -265,10 +278,13 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.FaMSeC_state = 0
         self.ET_GOA_state = 0
 
+        self.should_record = False
+        self.control_state = ControlState.STOPPED
         self.outcome_assessment = -1
         self.model_quality_assessment = -1
         self.current_time = -1
         self.current_waypoint = 0
+        self.scenario_data = []
 
         self.delta = 0.05 # TODO triggering threshold
 
@@ -276,6 +292,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.update_map_callback()
 
         self.grab_odom = rospy.Subscriber('/tars/vrpn_client_node/cohrint_tars/pose', PoseStamped, self.pose_callback)
+        self.image_signal = rospy.Subscriber('/goa/image_signal', String, self.image_signal_callback)
 
         self.start_time = time.time()
         #self.x = 0
@@ -289,16 +306,62 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.timer.setInterval(10)
         self.timer.start()
 
+    def teleop_callback(self):
+        if self.control_state == ControlState.HUMAN:
+            self.control_state = ControlState.STOPPED
+            self.teleop_robot_button.setStyleSheet('background-color: {}'.format('light gray'))
+        else:
+            self.control_state = ControlState.HUMAN
+            self.teleop_robot_button.setStyleSheet('background-color: {}'.format('green'))
+
+    def toggle_record_callback(self):
+        self.record(not self.should_record)
+
+    def record(self, state):
+        if state:
+            self.toggle_record_button.setStyleSheet('background-color: {}'.format('green'))
+        else:
+            self.toggle_record_button.setStyleSheet('background-color: {}'.format('light gray'))
+        self.should_record = state
+
+    def test_add_obstacle_callback(self):
+        obs = 'BOX1'
+        pos = self.pose
+        ori = self.orientation[-1]
+        loc = [pos[0]+2*np.cos(ori), pos[1]+2*np.sin(ori)]
+        self.known_obstacles[obs] = [float(loc[0]), float(loc[1])]
+        print(self.known_obstacles)
+
+    def test_trigger_goa_callback(self):
+        self.stop_robot_callback()
+        rospy.sleep(1)
+        #self.generate_plan_callback()
+        self.run_assessment_callback()
+
+    def image_signal_callback(self, msg):
+        ids = msg
+        print("received ids", ids)
+        self.test_add_obstacle_callback()
+        if self.wp_thread is not None:
+            self.wp_thread.should_drive = False
+        #self.test_trigger_goa_callback()
+
     def write_data_callback(self):
+        self.record(False)
+        rospy.sleep(0.01) # let the last recording occur
+        data = self.scenario_data
+        columns = ['t', 'Xm', 'Xo', 'px', 'py', 'pz', 'state']
+
         filename = 'data.csv'
-        data = {'t':  self.time_over_time,
-                'Xm': self.model_quality_over_time,
-                'Xo': self.outcome_assessment_over_time,
-                'x': [p[0] for p in self.pose_over_time],
-                'y': [p[1] for p in self.pose_over_time],
-                'z': [p[2] for p in self.pose_over_time],
-                }
-        pd.DataFrame(data).to_csv(filename, index=False)
+        #data = {'t':  self.time_over_time,
+        #        'Xm': self.model_quality_over_time,
+        #        'Xo': self.outcome_assessment_over_time,
+        #        'x': [p[0] for p in self.pose_over_time],
+        #        'y': [p[1] for p in self.pose_over_time],
+        #        'z': [p[2] for p in self.pose_over_time],
+        #        }
+        pd.DataFrame(data, columns=columns).to_csv(filename, index=False)
+        self.scenario_data = []
         pass
 
     def go_home_callback(self):
@@ -343,11 +406,13 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
             self.wp_thread.quit()
             self.wp_thread.wait()
             self.wp_thread = None
-            self.waypoints = []
+            #self.waypoints = [] # TODO only delete waypoint if we arrived at the goal
         self.start_robot.setStyleSheet('background-color: {}'.format('light gray'))
+        self.control_state = ControlState.STOPPED
 
     def start_robot_callback(self):
         self.start_robot.setStyleSheet('background-color: {}'.format('green'))
+        self.control_state = ControlState.AUTONOMY
         self.wp_thread = WaypointThread()
         #self.wp_thread.xx = self.goal[0]
         #self.wp_thread.yy = self.goal[1]
@@ -364,6 +429,9 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         except Exception as e:
             traceback.print_exc()
 
+    def record_timestep(self, t, Xm, Xo, px, py, pz, state):
+        self.scenario_data.append([t, Xm, Xo, px, py, pz, state])
+
     def update_timer_callback(self):
         try:
             t = time.time() - self.start_time
@@ -374,6 +442,12 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
             self.orientation_display.setText(orient_str)
             self.time_display.setText(time_str)
             self.update_map_callback()
+            if self.should_record:
+                self.record_timestep(t,
+                                     self.model_quality_assessment,
+                                     self.outcome_assessment,
+                                     *self.pose,
+                                     self.control_state)
 
             if len(self.waypoints) > 0:
                 wp_x, wp_y = self.waypoints[self.current_waypoint]
@@ -419,6 +493,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
                 self.rollout.orientation = self.orientation
                 self.rollout.goal = self.goal
                 self.rollout.waypoints = self.waypoints
+                self.rollout.known_obstacles = self.known_obstacles
                 self.rollout.finished.connect(self.update_goa_callback)
                 self.rollout.start()
                 #self.update_goa_callback()
@@ -434,6 +509,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
                 self.et_object.set_pred_paths(pred_paths)
                 self.et_object.preprocess()
                 goa = self.et_object.get_goa_times(self.goa_threshold, 0)
+                print('GOA ', goa)
                 label, color = assessment_to_label(goa)
                 self.outcome_assessment = goa
                 self.goa_display.setText(label)
@@ -456,7 +532,10 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
     def generate_plan_callback(self):
         try:
             self.generate_plan_button.setStyleSheet('background-color: {}'.format('green'))
-            self.waypoints = plan(self.goal, self.pose, [rrt.Obstacle(rrt.Obstacle.circle, [2.5, 2.5], [0.5], '1')])
+            self.current_waypoint = 0
+            obs = [rrt.Obstacle(rrt.Obstacle.circle, (v[1], v[0]), [0.25], '1') for k, v in self.known_obstacles.items()]
+            print(obs)
+            self.waypoints = plan(self.goal, self.pose, obs)
             print(self.waypoints)
             self.update_map_callback()
             self.generate_plan_button.setStyleSheet('background-color: {}'.format('light grey'))
@@ -466,7 +545,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
     def update_map_callback(self):
         try:
             #print('updating the map!')
-            img = plot_map(self.pose[0:2], self.goal, self.waypoints, self.predx, self.predy)
+            img = plot_map(self.pose[0:2], self.goal, self.waypoints, self.known_obstacles, self.predx, self.predy)
             img = img.astype(np.uint8)
             height, width, channel = img.shape
             bytesPerLine = 3 * width
@@ -521,7 +600,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
             self.exp_display.setStyleSheet('background-color: {}'.format('blue'))
 
 
-def plot_map(position, goal, waypoints, predx=None, predy=None):
+def plot_map(position, goal, waypoints, obstacles, predx=None, predy=None):
     fig, ax = plt.subplots(figsize=(3, 3))
     if len(waypoints) > 0:
         # plt.scatter([position[0]], [position[1]], color='black')
@@ -531,6 +610,9 @@ def plot_map(position, goal, waypoints, predx=None, predy=None):
         plt.scatter(*goal, color='green')
     if predx is not None:
         ax.scatter([predx], [predy], color='orange')
+    for o, loc in obstacles.items():
+        obs = patches.Circle(loc, radius=0.25, color='black', fill=False)
+        ax.add_patch(obs)
     ax.scatter(*position, color='blue', label='robot pose')
     ax.set_ylim([0, 10.1])
     ax.set_xlim([0, 10.1])

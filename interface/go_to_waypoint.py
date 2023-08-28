@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # Import necessary libraries
+import time
 import traceback
 
 import rospy  # Ros library
@@ -47,6 +48,7 @@ class WaypointFollower:
         self.K2 = 4
         self.xx = 0
         self.yy = 0
+        self.last_time = 0
         self.counter = 0
         ###
         self.et_object = et_goa()
@@ -79,6 +81,7 @@ class WaypointFollower:
         """
         PD control for waypoint following
         """
+        self.last_time = time.time()
         pose, angle = extract_msg(data)
         (x_pose, y_pose, z_pose) = pose[0], pose[1], pose[2]
         (y_rot, x_rot, z_rot) = angle[0], angle[1], angle[2]
@@ -141,19 +144,19 @@ class WaypointFollower:
         """
         Navigate to a waypoint at (_x, _y)
         """
+        t_timeout = 1
         self.x_dest = _x
         self.y_dest = _y
 
         self.do_et = True
         # Go to waypoint
         while self.dist_err > 0.1:
-            #counter += 1
-            #if counter % self.et_object.sample_rate == 0:
-            #    self.et_object.get_si(self.xx, self.yy, 0)
-            vel = Twist()
-            vel.linear.x = self.pose_cmd_vel
-            vel.angular.z = self.rot_cmd_vel
-            self.pub_vel.publish(vel)
+            # TODO test me - stop on loss of connection
+            if abs(self.last_time-time.time()) < t_timeout:
+                vel = Twist()
+                vel.linear.x = self.pose_cmd_vel
+                vel.angular.z = self.rot_cmd_vel
+                self.pub_vel.publish(vel)
             self.sleep_rate.sleep()
 
 
@@ -165,6 +168,5 @@ if __name__ == '__main__':
         wp.go_to_waypoint(x_dest, y_dest)
         wp.dist_err = 1
         wp.go_to_waypoint(3, 6)
-        #wp.reset()
     except rospy.ROSInterruptException:
         pass

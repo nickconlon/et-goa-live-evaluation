@@ -397,7 +397,7 @@ class RRT:
         return np.asarray(path_points)
 
 
-def plan_rrt_webots(start, goal, obstacles, bounds, visualize_route=False, filename='plot.png'):
+def plan_rrt_webots(start, goal, obstacles, bounds, visualize_route=False, filename='./plot.png'):
     iterations = 5000
     planner = RRT(bounds, 'holonomic')
 
@@ -456,7 +456,7 @@ def plot_circle(ax, x, y, radius, color="-k", label="test"):
     xl = [x + radius * math.cos(np.deg2rad(d)) for d in deg]
     yl = [y + radius * math.sin(np.deg2rad(d)) for d in deg]
     ax.plot(xl, yl, color)
-    ax.annotate(s=label, xy=(x, y), ha='center')
+    ax.annotate(text=label, xy=(x, y), ha='center')
 
 
 def plot_rect(ax, x, y, width, height, angle=0, color="blue", label="test"):

@@ -126,11 +126,19 @@ def do_rollout(position, orientation, goal, waypoint_counter, known_obstacles, w
 
 
 if __name__ == "__main__":
-    sub = ZmqSubscriber('192.168.0.12', 5559)
-    while True:
-        try:
-            data = sub.receive(flags=NOBLOCK)
-            print('received: ', data)
-        except Exception as e:
-            pass
-        time.sleep(0.1)
+    pos = [0,0,0]
+    orientation = [0, 0, 1, 0]
+    goal = [3, 3]
+    obs_loc = [pos[0] + 2*np.cos(np.pi/4), pos[1] + 2*np.sin(np.pi/4)]
+    obs_loc = [float(x) for x in obs_loc]
+    known_obs = {'BOX1': obs_loc}
+    waypoints = np.array([[0, 0], [3, 3]])
+    do_rollout(pos, orientation, goal, 0, known_obs, waypoints)
+    #sub = ZmqSubscriber('192.168.0.12', 5559)
+    #while True:
+    #    try:
+    #        data = sub.receive(flags=NOBLOCK)
+    #        print('received: ', data)
+    #    except Exception as e:
+    #        pass
+    #    time.sleep(0.1)

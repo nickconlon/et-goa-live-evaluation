@@ -773,6 +773,24 @@
      <string>Telop</string>
     </property>
    </widget>
+   <widget class="QPushButton" name="clear_obstacles_button">
+    <property name="geometry">
+     <rect>
+      <x>510</x>
+      <y>440</y>
+      <width>111</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Clear obs</string>
+    </property>
+   </widget>
    <zorder>confidence_panel_label_2</zorder>
    <zorder>confidence_panel_label</zorder>
    <zorder>run_goa</zorder>
@@ -812,6 +830,7 @@
    <zorder>test_trigger_goa_button</zorder>
    <zorder>toggle_record_button</zorder>
    <zorder>teleop_robot_button</zorder>
+   <zorder>clear_obstacles_button</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

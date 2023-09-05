@@ -45,15 +45,12 @@ class WaypointThread(QtCore.QThread):
         _ys = self.waypoints[:,1]
         waypoint_counter = 0
         for _x, _y in zip(_xs, _ys):
-            self.waypoint_emit.emit(waypoint_counter)
-            waypoint_counter += 1
             if not self.should_run:
                 break
             print('going to wp {}, {}'.format(_x, _y))
             gtw.dist_err = 1.0
             gtw.x_dest = _x
             gtw.y_dest = _y
-
             # Go to waypoint
             while gtw.dist_err > 0.1 and self.should_run:
                 gtw.do_et = True
@@ -65,6 +62,9 @@ class WaypointThread(QtCore.QThread):
                     gtw.pub_vel.publish(vel)
                 gtw.sleep_rate.sleep()
             gtw.do_et = False
+            if gtw.dist_err <= 0.1:
+                self.waypoint_emit.emit(waypoint_counter)
+                waypoint_counter += 1
         gtw.grab_odom.unregister()
         gtw.grab_odom = None
         t2 = time.time()
@@ -193,7 +193,8 @@ class RolloutThread(QtCore.QThread):
     def run(self):
         print('starting rollout thread')
         try:
-            comms.do_rollout(self.pose, self.orientation, self.goal, 0, self.known_obstacles, self.waypoints)
+            test_obs = {'SAND': [2.4, 3.4]}
+            comms.do_rollout(self.pose, self.orientation, self.goal, 0, test_obs, self.waypoints)
             self.finished.emit()
         except Exception as e:
             traceback.print_exc()
@@ -248,16 +249,17 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.write_data_button.clicked.connect(self.write_data_callback)
         self.toggle_record_button.clicked.connect(self.toggle_record_callback)
         self.teleop_robot_button.clicked.connect(self.teleop_callback)
-
+        self.clear_obstacles_button.clicked.connect(self.clear_obstacles_callback)
         self.test_add_obstacle_button.clicked.connect(self.test_add_obstacle_callback)
         self.test_trigger_goa_button.clicked.connect(self.test_trigger_goa_callback)
+        self.end_sim.clicked.connect(self.hide_buttons_callback)
 
         self.wp_thread = None
         self.rollout_thread = None
 
         # parameters and storage for runtime stuff
         self.known_obstacles = {}
-        self.goa_threshold = 30
+        self.goa_threshold = 60
         self.goal = [-1, -1]
         self.pose = [1.5, 1.5, 0.0001]
         self.orientation = [0, 0, 1, 0]
@@ -305,6 +307,17 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.timer.timeout.connect(self.update_timer_callback)
         self.timer.setInterval(10)
         self.timer.start()
+
+    def hide_buttons_callback(self):
+        self.exp_display.hide()
+        self.sq_display.hide()
+        self.exp_label.hide()
+        self.sq_label.hide()
+        self.actual_outcome_display.hide()
+        self.actual_oa_label.hide()
+
+    def clear_obstacles_callback(self):
+        self.known_obstacles = {}
 
     def teleop_callback(self):
         if self.control_state == ControlState.HUMAN:
@@ -406,12 +419,11 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
             self.wp_thread.quit()
             self.wp_thread.wait()
             self.wp_thread = None
-            #self.waypoints = [] # TODO only delete waypoint if we arrived at the goal
-        self.start_robot.setStyleSheet('background-color: {}'.format('light gray'))
+        self.start_robot_button.setStyleSheet('background-color: {}'.format('light gray'))
         self.control_state = ControlState.STOPPED
 
     def start_robot_callback(self):
-        self.start_robot.setStyleSheet('background-color: {}'.format('green'))
+        self.start_robot_button.setStyleSheet('background-color: {}'.format('green'))
         self.control_state = ControlState.AUTONOMY
         self.wp_thread = WaypointThread()
         #self.wp_thread.xx = self.goal[0]
@@ -460,7 +472,9 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
 
     def waypoint_callback(self, msg):
         try:
-            self.current_waypoint = msg
+            if len(self.waypoints) > 0:
+                self.waypoints = self.waypoints[1:]
+            #self.current_waypoint = msg
         except Exception as e:
             traceback.print_exc()
 
@@ -484,6 +498,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
                 traceback.print_exc()
 
     def run_assessment_callback(self):
+        print('Simulating {} waypoints'.format(len(self.waypoints)))
         try:
             if len(self.waypoints) > 0 and self.FaMSeC_state:
                 self.run_goa.setStyleSheet('background-color: {}'.format('green'))
@@ -533,7 +548,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         try:
             self.generate_plan_button.setStyleSheet('background-color: {}'.format('green'))
             self.current_waypoint = 0
-            obs = [rrt.Obstacle(rrt.Obstacle.circle, (v[1], v[0]), [0.25], '1') for k, v in self.known_obstacles.items()]
+            obs = [rrt.Obstacle(rrt.Obstacle.circle, (v[1], v[0]), [0.5], '1') for k, v in self.known_obstacles.items()]
             print(obs)
             self.waypoints = plan(self.goal, self.pose, obs)
             print(self.waypoints)
@@ -575,9 +590,10 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
                 self.orientation_over_time.append([p for p in self.orientation])
 
                 if self.ET_GOA_state and si < self.delta:
+                    print('TRIGGERING ET-GOA')
                     self.stop_robot_callback()
-                    self.generate_plan_callback()
-                    self.outcome_assessment_callback()
+                    #self.generate_plan_callback()
+                    self.run_assessment_callback()
 
         self.et_counter += 1
 
@@ -606,6 +622,7 @@ def plot_map(position, goal, waypoints, obstacles, predx=None, predy=None):
         # plt.scatter([position[0]], [position[1]], color='black')
         ax.plot(waypoints[:, 0], waypoints[:, 1], color='black')
         ax.scatter(waypoints[:, 0], waypoints[:, 1], color='black')
+        ax.plot([position[0], waypoints[0,0]], [position[1], waypoints[0,1]], color='black')
     if goal is not None:
         plt.scatter(*goal, color='green')
     if predx is not None:
@@ -614,6 +631,7 @@ def plot_map(position, goal, waypoints, obstacles, predx=None, predy=None):
         obs = patches.Circle(loc, radius=0.25, color='black', fill=False)
         ax.add_patch(obs)
     ax.scatter(*position, color='blue', label='robot pose')
+
     ax.set_ylim([0, 10.1])
     ax.set_xlim([0, 10.1])
     ax.set_yticks([0, 2, 4, 6, 8, 10])

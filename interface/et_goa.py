@@ -134,7 +134,7 @@ class et_goa:
         mu = d[6]
         std = d[7]
         si_o = gaussian_si_1d(pred_mu=mu, pred_std=std, actual=actual_obs, plot=False, min_std=min_std)
-        si = np.min([si_x, si_y, si_o])
+        si = np.min([si_x, si_y]) # TODO turned off sensor Model Quality
         self.counter += self.sample_rate
         print('t: {:.2f}, si: {:.2f}'.format(d[0], si))
         return si, mux, muy

@@ -7,14 +7,18 @@ ET-GOA leverages the Generalized Outcome Assessment (GOA) and Model Quality Asse
 Machine Self-Confidence (FaMSeC) to enable an autonomous robot to understand when and how its competency changes during
 task execution. This project extends the following:
 
+[Generalizing Competency Self-Assessment for Autonomous Vehicles Using Deep Reinforcement Learning](https://arc.aiaa.org/doi/10.2514/6.2022-2496)
+
 [Dynamic Competency Self-Assessment for Autonomous Agents](https://arxiv.org/abs/2303.01646)
 
-We published this paper: 
+We published this article: 
 
 [Event-triggered robot self-assessment to aid in autonomy adjustment](https://www.frontiersin.org/articles/10.3389/frobt.2023.1294533/full)
 
 ### Installation
-Python: 3.8.10 + libs in requirements.txt
+Ubuntu 20.04
+
+Python: 3.8.10
 
 ROS: noetic
 

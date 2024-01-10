@@ -14,7 +14,7 @@ We published this paper:
 [Event-triggered robot self-assessment to aid in autonomy adjustment](https://www.frontiersin.org/articles/10.3389/frobt.2023.1294533/full)
 
 ### Installation
-Python: 3.8.10
+Python: 3.8.10 + libs in requirements.txt
 
 ROS: noetic
 

@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import math
 import random
 
+#
+# RRT class based on several different implementations I found online and some robotics classes.
+#
 
 class Node:
     """

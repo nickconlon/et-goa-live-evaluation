@@ -89,8 +89,6 @@ class et_goa:
     def preprocess(self):
         predicted_states = [np.load(d, allow_pickle=True) for d in self.pred_paths]
         for idx, x in enumerate(predicted_states):
-            for iidx, y in enumerate(x):
-                predicted_states[idx][iidx,7] = len(y[7])
             predicted_states[idx] = predicted_states[idx].astype('float64')
         max_len = np.max([len(x) for x in predicted_states])
         preprocessed = np.zeros((max_len, 8)) * np.nan

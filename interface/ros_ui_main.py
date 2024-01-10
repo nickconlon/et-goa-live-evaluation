@@ -214,7 +214,7 @@ def plan(goal_pos, robot_pos, obstacle_pos, ret='all'):
     # [ymin ymax], [xmin, xmax]
     bounds = np.array([[1, 10], [1, 5]])
 
-    waypoints = rrt.plan_rrt_webots(starting_point, rrt_goal, obstacle_pos, bounds, visualize_route=True)
+    waypoints = rrt.plan_rrt_webots(starting_point, rrt_goal, obstacle_pos, bounds)
     if len(waypoints) == 0:
         _ret_waypoint = []
     elif ret == 'next':

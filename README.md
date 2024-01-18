@@ -5,7 +5,7 @@ a simulated and live robot.
 
 ET-GOA leverages the Generalized Outcome Assessment (GOA) and Model Quality Assessment (MQA) metrics from Factorized
 Machine Self-Confidence (FaMSeC) to enable an autonomous robot to understand when and how its competency changes during
-task execution. This project extends the following:
+task execution. This project extends our previous work:
 
 [Generalizing Competency Self-Assessment for Autonomous Vehicles Using Deep Reinforcement Learning](https://arc.aiaa.org/doi/10.2514/6.2022-2496)
 

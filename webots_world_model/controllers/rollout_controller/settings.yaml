@@ -1,0 +1,12 @@
+start_position: [3.0467216279940215, 2.6948401413291085, 0.06349758689497531]
+start_orientation: [0.0, 0.0, 1.0, -2.298107323101952]
+goal_position: [2.0, 5.0]
+waypoint_index: 0
+num_iterations: 10
+publish: false
+prefix: rollout
+known_obs:
+  SAND: [2.4, 3.4]
+save_path: /home/cohrint-skynet/Code/goa_robot_study/rollouts
+wp_x: [2.580848436879686, 2.969874715690537, 2.0]
+wp_y: [3.7210729189056013, 4.7787394799703735, 5.0]

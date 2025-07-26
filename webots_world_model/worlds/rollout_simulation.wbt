@@ -1,0 +1,96 @@
+#VRML_SIM R2023a utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/objects/factory/containers/protos/WoodenBox.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/robots/adept/pioneer3/protos/Pioneer3at.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/appearances/protos/Parquetry.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/appearances/protos/Sand.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/objects/apartment_structure/protos/Wall.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/appearances/protos/ThreadMetalPlate.proto"
+
+WorldInfo {
+}
+Viewpoint {
+  orientation -0.3958780595051119 0.42357043332696626 0.8147813510468151 1.6453414612365087
+  position -3.3055575626112805 -94.86361917273014 96.07686406493752
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  floorSize 100 100
+  floorAppearance Parquetry {
+  }
+}
+DEF WALL Wall {
+  translation 45.4576 -45.0835 0
+  size 0.2 5 1
+}
+DEF ROBOT Pioneer3at {
+  translation -6 0 -0.00238888
+  rotation 0.0006008698269539041 0.004026768840320156 0.9999917120097334 -0.012085307179586557
+  controller "rollout_controller"
+  supervisor TRUE
+  extensionSlot [
+    Camera {
+      width 256
+      height 256
+    }
+    Compass {
+    }
+    GPS {
+    }
+  ]
+}
+DEF BOX1 WoodenBox {
+  translation 43.8321 -46.3664 0.25
+  size 0.5 0.5 0.5
+}
+DEF BOX2 WoodenBox {
+  translation 43.1288 -49.0706 0.25
+  name "wooden box(1)"
+  size 0.5 0.5 0.5
+}
+DEF BOX3 WoodenBox {
+  translation 43.3186 -48.1722 0.25
+  name "wooden box(3)"
+  size 0.5 0.5 0.5
+}
+DEF BOX4 WoodenBox {
+  translation 44.3858 -47.4101 0.25
+  name "wooden box(4)"
+  size 0.5 0.5 0.5
+}
+DEF SAND Solid {
+  translation 43.6618 -44.7514 0.03
+  rotation 0 0 1 -1.5707953071795862
+  scale 0.24 0.24 0.24
+  children [
+    Shape {
+      appearance Sand {
+      }
+      geometry Box {
+        size 3 4 0.01
+      }
+    }
+  ]
+  boundingObject Box {
+    size 3 4 0.01
+  }
+}
+DEF GOAL Solid {
+  translation 41.0955 -48.5117 -7.10543e-15
+  children [
+    Shape {
+      appearance ThreadMetalPlate {
+      }
+      geometry Cylinder {
+        height 0.01
+      }
+    }
+  ]
+  name "goal"
+}

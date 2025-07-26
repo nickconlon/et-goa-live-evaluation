@@ -1,15 +1,26 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy import stats
 import famsec as famsec
-from comms import min_diff_pos_sorted, find_nearest
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy import stats
+
+
+def find_nearest(array, value):
+    idx = (np.abs(array - value)).argmin()
+    return idx
+
+
+def min_diff_pos_sorted(sorted_array, target):
+    idx = np.searchsorted(sorted_array, target)
+    idx1 = max(0, idx - 1)
+    return np.abs(np.array(sorted_array[idx1 : idx + 1]) - target).argmin() + idx1
+
 
 def preprocess_predicted(predicted_paths):
     predicted_states = [np.load(d, allow_pickle=True) for d in predicted_paths]
     for idx, x in enumerate(predicted_states):
         for iidx, y in enumerate(x):
             predicted_states[idx][iidx, 7] = len(y[7])
-        predicted_states[idx] = predicted_states[idx].astype('float64')
+        predicted_states[idx] = predicted_states[idx].astype("float64")
     max_len = np.max([len(x) for x in predicted_states])
     preprocessed = np.zeros((max_len, 8)) * np.nan
     indexes = [8, 0, 1, 7]  #
@@ -39,12 +50,20 @@ def gaussian_si_1d(pred_mu, pred_std, actual, min_std=1, plot=False):
     _si = _model.cdf(_loc - _dist) + (1 - _model.cdf(_loc + _dist))
     if plot:
         y = _model.pdf(_x)
-        plt.plot(_x, y, color='black')
-        plt.plot([min(_x), max(_x)], [0, 0], color='black')
-        plt.scatter([_loc - _dist, _loc + _dist], [_model.pdf(_loc - _dist), _model.pdf(_loc + _dist)], c='red')
-        plt.plot([_loc + _dist, _loc + _dist], [0, _model.pdf(_loc + _dist)], c='red')
-        plt.plot([_loc - _dist, _loc - _dist], [0, _model.pdf(_loc - _dist)], c='red')
-        plt.title("full:{:.2f}, SI:{:.2f}, std:{:.2f}".format(_model.cdf(_myclip_b), _si, _scale))
+        plt.plot(_x, y, color="black")
+        plt.plot([min(_x), max(_x)], [0, 0], color="black")
+        plt.scatter(
+            [_loc - _dist, _loc + _dist],
+            [_model.pdf(_loc - _dist), _model.pdf(_loc + _dist)],
+            c="red",
+        )
+        plt.plot([_loc + _dist, _loc + _dist], [0, _model.pdf(_loc + _dist)], c="red")
+        plt.plot([_loc - _dist, _loc - _dist], [0, _model.pdf(_loc - _dist)], c="red")
+        plt.title(
+            "full:{:.2f}, SI:{:.2f}, std:{:.2f}".format(
+                _model.cdf(_myclip_b), _si, _scale
+            )
+        )
         plt.xlim([min(_x), max(_x)])
         plt.tight_layout()
         plt.pause(0.1)
@@ -69,10 +88,10 @@ def kde_assessment(actual, predicted, ax=None):
     if ax is not None:
         ax.clear()
         ax.plot(xx, p_distribution)
-        #ax.hist(dpredicted, density=True)
-        ax.plot([actual, actual], [0, p_actual], color='red', linewidth=3)
-        #ax.plot(xx[smaller], p_distribution_smaller)
-        ax.set_title('SI={:.2f}'.format(surprise))
+        # ax.hist(dpredicted, density=True)
+        ax.plot([actual, actual], [0, p_actual], color="red", linewidth=3)
+        # ax.plot(xx[smaller], p_distribution_smaller)
+        ax.set_title("SI={:.2f}".format(surprise))
     return surprise
 
 
@@ -87,12 +106,12 @@ class et_goa:
         self.pred_paths = paths
 
     def preprocess(self):
+        print("preprocessing data at: ", self.pred_paths)
         predicted_states = [np.load(d, allow_pickle=True) for d in self.pred_paths]
-        for idx, x in enumerate(predicted_states):
-            predicted_states[idx] = predicted_states[idx].astype('float64')
+        print(predicted_states[0][0])
+        indexes = [8, 0, 1, 7]  # [robot time, x, y, obs]
         max_len = np.max([len(x) for x in predicted_states])
         preprocessed = np.zeros((max_len, 8)) * np.nan
-        indexes = [8, 0, 1, 7]  #
         for t in range(max_len):
             data = []
             for i in indexes:
@@ -111,30 +130,39 @@ class et_goa:
         if self.counter >= len(self.data):
             return 0.0, None, None
         d_idx = min_diff_pos_sorted(self.data[:, 0], t)
-        #print("NEW: ({:.2f}, {:.2f})".format(self.data[d_idx][2], self.data[d_idx][4]))
+        # print("NEW: ({:.2f}, {:.2f})".format(self.data[d_idx][2], self.data[d_idx][4]))
 
-        d = self.data[self.counter]
-        #print("OLD:({:.2f}, {:.2f})".format(d[2], d[4]))
-        print("mu(x,y, obs): ({:.2f}, {:.2f}, {:.2f}) || act({:.2f}, {:.2f}, {:.2f})"
-              .format(d[2], d[4], d[6], actual_x, actual_y, actual_obs))
+        d = self.data[d_idx]
+        # print("OLD:({:.2f}, {:.2f})".format(d[2], d[4]))
+        print(
+            "mu(t, x,y, obs): ({:.2f}, {:.2f}, {:.2f}, {:.2f}) || act({:.2f}, {:.2f}, {:.2f}, {:.2f})".format(
+                d[0], d[2], d[4], d[6], t, actual_x, actual_y, actual_obs
+            )
+        )
         print("")
         # x position
         mux = d[2]
         stdx = d[3]
-        si_x = gaussian_si_1d(pred_mu=mux, pred_std=stdx, actual=actual_x, plot=False, min_std=min_std)
+        si_x = gaussian_si_1d(
+            pred_mu=mux, pred_std=stdx, actual=actual_x, plot=False, min_std=min_std
+        )
 
         # y position
         muy = d[4]
         stdy = d[5]
-        si_y = gaussian_si_1d(pred_mu=muy, pred_std=stdy, actual=actual_y, plot=False, min_std=min_std)
+        si_y = gaussian_si_1d(
+            pred_mu=muy, pred_std=stdy, actual=actual_y, plot=False, min_std=min_std
+        )
 
         # num objects
         mu = d[6]
         std = d[7]
-        si_o = gaussian_si_1d(pred_mu=mu, pred_std=std, actual=actual_obs, plot=False, min_std=min_std)
-        si = np.min([si_x, si_y]) # TODO turned off sensor Model Quality
+        si_o = gaussian_si_1d(
+            pred_mu=mu, pred_std=std, actual=actual_obs, plot=False, min_std=min_std
+        )
+        si = np.min([si_x, si_y])  # TODO turned off sensor Model Quality
         self.counter += self.sample_rate
-        print('t: {:.2f}, si: {:.2f}'.format(d[0], si))
+        print("t: {:.2f}, si: {:.2f}".format(d[0], si))
         return si, mux, muy
 
     def get_goa_times(self, time_cutoff, time_completed):
@@ -144,18 +172,22 @@ class et_goa:
         distribution = [int(x < time_cutoff) for x in times]
         partition = np.array([-2, 0, 2])
         z_star = 2
-        goa_time = famsec.assess_rollouts(distribution=distribution, bins=partition, z_star=z_star)
+        goa_time = famsec.assess_rollouts(
+            distribution=distribution, bins=partition, z_star=z_star
+        )
         return goa_time
 
 
-if __name__ == '__main__':
-    pred_paths = [r'C:\DATA\webots\rollout{}_state.npy'.format(x) for x in np.arange(0, 10)]
-    #et_obj = et_goa()
-    #et_obj.set_pred_paths(pred_paths)
-    #et_obj.preprocess()
-    #et_obj.get_goa_times(135, 0)
-    #data = et_obj.data
-    #et_obj.get_si(0, 0, 0, t=120.01)
+if __name__ == "__main__":
+    pred_paths = [
+        r"C:\DATA\webots\rollout{}_state.npy".format(x) for x in np.arange(0, 10)
+    ]
+    # et_obj = et_goa()
+    # et_obj.set_pred_paths(pred_paths)
+    # et_obj.preprocess()
+    # et_obj.get_goa_times(135, 0)
+    # data = et_obj.data
+    # et_obj.get_si(0, 0, 0, t=120.01)
 
     raw = [np.load(d, allow_pickle=True) for d in pred_paths]
     act = 0

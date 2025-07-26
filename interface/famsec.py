@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.stats as stats
-import scipy.special as spacial
+
 
 class Metrics:
     def __init__(self):
@@ -79,7 +79,9 @@ class FaMSeC:
         elif d_upm == 0:
             outcome_assessment = 0
         else:
-            outcome_assessment = Metrics.logistic(d_upm/d_lpm, vert_shift=1)#spacial.expit(d_upm/d_lpm-1)
+            outcome_assessment = Metrics.logistic(
+                d_upm / d_lpm, vert_shift=1
+            )  # spacial.expit(d_upm/d_lpm-1)
         return outcome_assessment
 
     @staticmethod
@@ -128,7 +130,7 @@ class FaMSeC:
         :param action_obs:      single actual observation
         :return:                the surprise of the observation given the predictions in the range [0, 1]
         """
-        kernel = stats.gaussian_kde(predicted_dist, bw_method='scott')
+        kernel = stats.gaussian_kde(predicted_dist, bw_method="scott")
         xx = np.linspace(min(predicted_dist) - 10, max(predicted_dist) + 10, 500)
         smaller = np.where(kernel(xx) < kernel(action_obs))
         p_actual = kernel(action_obs)[0]
@@ -139,11 +141,12 @@ class FaMSeC:
 
         if True:
             import matplotlib.pyplot as plt
+
             plt.plot(xx, p_distribution)
             plt.hist(predicted_dist, density=True)
-            plt.plot([action_obs, action_obs], [0, p_actual], color='red', linewidth=3)
+            plt.plot([action_obs, action_obs], [0, p_actual], color="red", linewidth=3)
             plt.plot(xx[smaller], p_distribution_smaller)
-            plt.title('SI={:.2f}'.format(surprise))
+            plt.title("SI={:.2f}".format(surprise))
             plt.show()
         return surprise
 
@@ -164,7 +167,7 @@ class FaMSeC:
             :return:
             """
             if R >= 0:
-                return R ** a
+                return R**a
             else:
                 return -l * np.abs(R) ** b
                 # return -1 * np.abs(R) ** 1
@@ -176,7 +179,7 @@ class FaMSeC:
             :param p:
             :return:
             """
-            return (p ** g) / (p ** g + (1 - p) ** g) ** (1 / g)
+            return (p**g) / (p**g + (1 - p) ** g) ** (1 / g)
             # return (p ** 1) / (p ** 1 + (1 - p) ** 1) ** (1 / 1)
 
         def cpt_single_point(p, u):
@@ -186,7 +189,7 @@ class FaMSeC:
         bin_means = []
         print("less: ", len(distribution[distribution <= 0]))
         for i in range(len(bins) - 1):
-            bin_means.append(np.mean(bins[i:i + 2]))
+            bin_means.append(np.mean(bins[i : i + 2]))
         hist = hist / np.sum(hist)
         utility = 0.0
         for i in range(len(bin_means)):
@@ -198,3 +201,16 @@ class FaMSeC:
 def assess_rollouts(distribution, bins, z_star):
     goa = FaMSeC.generalized_outcome_assessment(distribution, bins, z_star)
     return goa
+
+
+def assessment_to_label(raw_assessment):
+    if raw_assessment < 0.25:
+        return "very bad", "red"
+    elif raw_assessment < 0.4:
+        return "bad", "#C34A2C"
+    elif raw_assessment < 0.6:
+        return "fair", "yellow"
+    elif raw_assessment < 0.75:
+        return "good", "#6CC417"
+    else:
+        return "very good", "green"

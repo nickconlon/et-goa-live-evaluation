@@ -6,7 +6,7 @@ import traceback
 
 import numpy as np
 import rospy  # Ros library
-from typing import List, Tuple, Any
+from typing import List, Any
 from numpy.typing import NDArray
 import rrt
 from et_goa import et_goa
@@ -16,9 +16,11 @@ from matplotlib import patches as patches
 from matplotlib import pyplot as plt
 from ros_conversion import extract_msg
 
+from world_model import WorldModel
+
 
 class WaypointFollower:
-    def __init__(self, pred_paths: List[str]) -> None:
+    def __init__(self, world_model: WorldModel) -> None:
         self.x_dest = None
         self.y_dest = None
         self.pose_cmd_vel = None
@@ -30,13 +32,8 @@ class WaypointFollower:
         self.yy = 0
         self.last_time = 0
         self.counter = 0
-        ###
-        self.et_object = et_goa()
-        self.et_object.set_pred_paths(pred_paths)
-        self.et_object.preprocess()
-        self.et_object.sample_rate = 20
-        goa = self.et_object.get_goa_times(60, 0)
-        print("GOA", goa)
+        self.start_time = time.time()
+        self.et_object = et_goa(world_model)
         self.do_et = False
         self.MQ = -1
         self.predx = -1
@@ -69,8 +66,9 @@ class WaypointFollower:
         if self.do_et:
             if self.counter % 100 == 0:
                 try:
+                    print("trying to ET-GOA")
                     self.MQ, self.predx, self.predy = self.et_object.get_si(
-                        self.xx, self.yy, 0
+                        self.xx, self.yy, t=self.last_time - self.start_time
                     )
                 except Exception:
                     traceback.print_exc()

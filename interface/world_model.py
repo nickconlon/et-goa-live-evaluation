@@ -26,7 +26,7 @@ class WorldModel(ABC):
         pass
 
     @abstractmethod
-    def get_samples(self) -> List[NDArray]:
+    def get_distribution(self) -> List[NDArray]:
         pass
 
     @abstractmethod
@@ -50,7 +50,7 @@ class WebotsWorldModel(WorldModel):
 
     def __init__(self, save_path: Path, rollouts_per_instance: int = 10) -> None:
         super().__init__()
-        self.obstacles = {"SAND": [2.4, 3.4]}
+        self.obstacles = {}  # {"SAND": [2.4, 3.4]}
         self.save_path = save_path
         self.num_rollouts_per_instance = rollouts_per_instance
         self.world_path = (
@@ -66,6 +66,7 @@ class WebotsWorldModel(WorldModel):
             / "rollout_controller"
             / "settings.yaml"
         )
+        self.samples = []
 
     def generate_samples(self, current_sate: State, path: NDArray[float]) -> None:
         """
@@ -80,7 +81,12 @@ class WebotsWorldModel(WorldModel):
         """
         self._do_rollouts(current_sate, 0, path)
 
-    def get_samples(self) -> List[NDArray]:
+        pths = glob.glob(self.save_path.as_posix() + "/*.npy")
+        pths.sort()
+        self.samples = [np.load(d, allow_pickle=True) for d in pths]
+        print("saved samples to World Model")
+
+    def get_distribution(self) -> List[NDArray]:
         """
         Get all the samples from the latest World Model rollout.
 
@@ -96,10 +102,59 @@ class WebotsWorldModel(WorldModel):
         Returns:
             Samples are of the form list[array[timesteps, state]]
         """
-        pths = glob.glob(self.save_path.as_posix() + "/*.npy")
-        pths.sort()
-        predicted_states = [np.load(d, allow_pickle=True) for d in pths]
-        return predicted_states
+        return self.samples
+
+    def get_distribution_at_time(self, time: float) -> NDArray[float]:
+        """
+        State = [
+            x, y, z,
+            rx, ry, rz, angle,
+            num observed obstacles,
+            robot time
+            wall time
+            ]
+        Args:
+            time:
+
+        Returns:
+
+        """
+        style = "nearest"
+
+        if style == "nearest":
+
+            def find_nearest(array, value):
+                idx = (np.abs(array - value)).argmin()
+                return idx
+
+            idxs = [find_nearest(x[:, 8], time) for x in self.samples]
+            t_pred = [x[idx, 8] for x, idx in zip(self.samples, idxs)]
+            x_pred = [x[idx, 0] for x, idx in zip(self.samples, idxs)]
+            y_pred = [x[idx, 1] for x, idx in zip(self.samples, idxs)]
+            ret = np.array(
+                [
+                    [np.mean(t_pred), np.std(t_pred)],
+                    [np.mean(x_pred), np.std(x_pred)],
+                    [np.mean(y_pred), np.std(y_pred)],
+                ]
+            )  # [t, x, y]
+
+        elif style == "interp":
+            from scipy import interpolate
+
+            predicted_states = self.samples
+            elements = []
+            tmins = [x[0, 8] for x in predicted_states]
+            tmaxs = [x[-1, 8] for x in predicted_states]
+            for index in [0, 1, 6, 7]:
+                functs = [
+                    interpolate.interp1d(x[:, 8], x[:, index]) for x in predicted_states
+                ]
+                pxx = [f(time) for f in functs]
+                elements.append([np.mean(pxx), np.std(pxx)])
+
+            ret = np.array(elements)
+        return ret
 
     def _do_rollouts(
         self, current_sate: State, waypoint_counter: int, waypoints: NDArray[float]
@@ -144,3 +199,28 @@ class WebotsWorldModel(WorldModel):
         ]
         p = subprocess.Popen(command)
         stdout, stderr = p.communicate()
+
+
+if __name__ == "__main__":
+    wm = WebotsWorldModel(Path(__file__).parent.parent / "rollouts")
+    s = State(
+        position=np.array([0, 0, 0.0]),
+        orientation=np.array([0, 0, 0.0, 0]),
+        time=0.0,
+        goal=np.array([2, 5.0]),
+        known_obstacles={},
+        waypoints=np.array([[0, 1], [1, 3], [2, 5]]),
+    )
+    wm.generate_samples(s, s.waypoints)
+    import matplotlib.pyplot as plt
+
+    plt.xlim(0, 10)
+    plt.ylim(0, 10)
+    plt.gca().set_aspect("equal")
+    for i in range(1, 25):
+        pred = wm.get_distribution_at_time(i)
+        pred_x = pred[0]
+        pred_y = pred[1]
+        plt.scatter(pred_x[0], pred_y[0])
+        plt.pause(0.01)
+    plt.show()

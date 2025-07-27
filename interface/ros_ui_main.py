@@ -64,12 +64,15 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
             waypoints=np.empty(0),
         )
 
+        self.wm_rollout_data_path = Path(__file__).parent.parent / "rollouts"
+        self.world_model = WebotsWorldModel(self.wm_rollout_data_path)
+
         self.goa_threshold = 60
         self.et_counter = 0
         self.pose_counter = 0
         self.predx = -1
         self.predy = -1
-        self.et_object = et_goa()
+        self.et_object = et_goa(self.world_model)
 
         # Some metrics we'll record
         self.model_quality_over_time = []
@@ -103,12 +106,6 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         )
 
         self.start_time = time.time()
-        self.wm_rollout_data_path = Path(__file__).parent.parent / "rollouts"
-        self.pred_paths = [
-            self.wm_rollout_data_path / "rollout{}_state.npy".format(x)
-            for x in np.arange(0, 10)
-        ]
-        self.et_object.set_pred_paths(self.pred_paths)
 
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update_timer_callback)
@@ -163,7 +160,6 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
     def test_trigger_goa_callback(self):
         self.stop_robot_callback()
         rospy.sleep(1)
-        # self.generate_plan_callback()
         self.run_assessment_callback()
 
     def image_signal_callback(self, msg):
@@ -185,12 +181,11 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         pass
 
     def go_home_callback(self):
-        # TODO test this before pushing
+        # Set the goal a little past home so it's easier to
+        # turn the robot around.
         self.state.goal = np.array([2.0, 1.5])
         self.generate_plan_callback()
-        # self.start_robot_callback()
         self.state.goal = np.array([2.0, 2.0])
-        # self.start_robot_callback()
 
     def toggle_famsec_callback(self):
         self.FaMSeC_state = not self.FaMSeC_state
@@ -244,10 +239,8 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         self.control_state = ControlState.AUTONOMY
 
         self.wp_thread = WaypointThread()
-
-        self.wp_thread.pred_paths = self.pred_paths  # used for ET-GOA monitoring
+        self.wp_thread.world_model = self.world_model
         self.wp_thread.waypoints = self.state.waypoints  # from the path solver
-
         self.wp_thread.mq_emit.connect(self.model_quality_callback)
         self.wp_thread.done_emit.connect(self.robot_graceful_stop)
         self.wp_thread.task_time_emit.connect(self.task_time_callback)
@@ -325,11 +318,10 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
             if len(self.state.waypoints) > 0 and self.FaMSeC_state:
                 self.run_goa.setStyleSheet("background-color: {}".format("green"))
                 print("doing rollout")
-                md = WebotsWorldModel(self.wm_rollout_data_path)
                 current_state = copy.deepcopy(self.state)
                 current_path = np.array(self.state.waypoints)
                 self.rollout_thread = WorldModelRolloutThread(
-                    current_state, current_path, md.generate_samples
+                    current_state, current_path, self.world_model.generate_samples
                 )
                 self.rollout_thread.finished.connect(self.update_goa_callback)
                 self.rollout_thread.start()
@@ -340,9 +332,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
         try:
             if len(self.state.waypoints) > 0 and self.FaMSeC_state:
                 self.goa_threshold = float(self.update_goa_value.text())
-                self.et_object.set_pred_paths(self.pred_paths)
-                self.et_object.preprocess()
-                goa = self.et_object.get_goa_times(self.goa_threshold, 0)
+                goa = self.et_object.get_goa_times(self.goa_threshold)
                 print("GOA ", goa)
                 label, color = assessment_to_label(goa)
                 self.outcome_assessment = goa
@@ -430,7 +420,7 @@ class myMainWindow(QMainWindow, ros_ui.Ui_MainWindow):
                 if self.ET_GOA_state and si < self.delta:
                     print("TRIGGERING ET-GOA")
                     self.stop_robot_callback()
-                    # self.generate_plan_callback()
+                    # TODO correct the waypoints here
                     self.run_assessment_callback()
 
         self.et_counter += 1

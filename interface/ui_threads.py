@@ -21,11 +21,11 @@ class WaypointThread(QtCore.QThread):
     waypoints = []
     should_run = True
     should_drive = True
-    pred_paths = []
+    world_model = None
 
     def run(self):
         t1 = time.time()
-        gtw = WaypointFollower(self.pred_paths)
+        gtw = WaypointFollower(self.world_model)
         print("starting waypoint thread")
         _xs = self.waypoints[:, 0]
         _ys = self.waypoints[:, 1]

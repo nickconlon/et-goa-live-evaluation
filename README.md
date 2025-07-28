@@ -98,13 +98,13 @@ of the robot's ability to complete the task within some time threshold, which ca
 MQA below some threshold is used to trigger a re-assessment of GOA given whatever new information is available
 to the robot's autonomy and World Model.
 
-#### To use the interface:
+#### To run the experiments:
 - Enter a new goal (x,y) within the mission area (black box on plot).
 - Press `Generate Plan`. A waypoint plan should display from the robot to the goal.
 - Press `FaMSeC on`. This enables the GOA/MQA components.
 - Enter an outcome threshold and press `Set outcome threshold (sec)` button.
 - Press `Run new Outcome Assessment`. This (1) kicks off the World Model to simulate the robot executing the waypoint
-plan, (2) computes GOA, (3) displays the GOA confidence label. This is an estimate of the robot's confidence in
+plan (and save output to `/rollouts`), (2) computes GOA, (3) displays the GOA confidence label. This is an estimate of the robot's confidence in
 achieving the desired task time threshold. User can select different times and rerun the assessment.
 - If GOA is within users desired level of risk, press `Auto` to command the robot to autonomously navigate to the
 goal along the waypoints.

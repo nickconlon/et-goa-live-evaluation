@@ -67,7 +67,9 @@ class Ui_MainWindow(object):
         font.setWeight(75)
         self.state_display.setFont(font)
         self.state_display.setFrameShape(QtWidgets.QFrame.Box)
-        self.state_display.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.state_display.setAlignment(
+            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
+        )
         self.state_display.setObjectName("state_display")
         self.write_data_button = QtWidgets.QPushButton(self.centralwidget)
         self.write_data_button.setGeometry(QtCore.QRect(380, 440, 111, 31))
@@ -86,7 +88,9 @@ class Ui_MainWindow(object):
         font.setBold(True)
         font.setWeight(75)
         self.mq_label.setFont(font)
-        self.mq_label.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.mq_label.setAlignment(
+            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
+        )
         self.mq_label.setObjectName("mq_label")
         self.update_goa = QtWidgets.QPushButton(self.centralwidget)
         self.update_goa.setGeometry(QtCore.QRect(590, 220, 231, 31))
@@ -162,7 +166,9 @@ class Ui_MainWindow(object):
         font.setBold(True)
         font.setWeight(75)
         self.sq_label.setFont(font)
-        self.sq_label.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.sq_label.setAlignment(
+            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
+        )
         self.sq_label.setObjectName("sq_label")
         self.sq_display = QtWidgets.QLabel(self.centralwidget)
         self.sq_display.setGeometry(QtCore.QRect(790, 120, 191, 31))
@@ -180,7 +186,9 @@ class Ui_MainWindow(object):
         font.setBold(True)
         font.setWeight(75)
         self.exp_label.setFont(font)
-        self.exp_label.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.exp_label.setAlignment(
+            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
+        )
         self.exp_label.setObjectName("exp_label")
         self.exp_display = QtWidgets.QLabel(self.centralwidget)
         self.exp_display.setGeometry(QtCore.QRect(790, 160, 191, 31))
@@ -199,7 +207,9 @@ class Ui_MainWindow(object):
         font.setWeight(75)
         self.confidence_panel_label.setFont(font)
         self.confidence_panel_label.setFrameShape(QtWidgets.QFrame.Box)
-        self.confidence_panel_label.setAlignment(QtCore.Qt.AlignHCenter|QtCore.Qt.AlignTop)
+        self.confidence_panel_label.setAlignment(
+            QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop
+        )
         self.confidence_panel_label.setObjectName("confidence_panel_label")
         self.confidence_panel_label_2 = QtWidgets.QLabel(self.centralwidget)
         self.confidence_panel_label_2.setGeometry(QtCore.QRect(10, 10, 261, 291))
@@ -209,7 +219,9 @@ class Ui_MainWindow(object):
         font.setWeight(75)
         self.confidence_panel_label_2.setFont(font)
         self.confidence_panel_label_2.setFrameShape(QtWidgets.QFrame.Box)
-        self.confidence_panel_label_2.setAlignment(QtCore.Qt.AlignHCenter|QtCore.Qt.AlignTop)
+        self.confidence_panel_label_2.setAlignment(
+            QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop
+        )
         self.confidence_panel_label_2.setObjectName("confidence_panel_label_2")
         self.actual_oa_label = QtWidgets.QLabel(self.centralwidget)
         self.actual_oa_label.setGeometry(QtCore.QRect(920, 190, 61, 31))
@@ -218,7 +230,9 @@ class Ui_MainWindow(object):
         font.setBold(True)
         font.setWeight(75)
         self.actual_oa_label.setFont(font)
-        self.actual_oa_label.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.actual_oa_label.setAlignment(
+            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
+        )
         self.actual_oa_label.setObjectName("actual_oa_label")
         self.expected_oa_label = QtWidgets.QLabel(self.centralwidget)
         self.expected_oa_label.setGeometry(QtCore.QRect(830, 190, 91, 31))
@@ -227,7 +241,9 @@ class Ui_MainWindow(object):
         font.setBold(True)
         font.setWeight(75)
         self.expected_oa_label.setFont(font)
-        self.expected_oa_label.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.expected_oa_label.setAlignment(
+            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
+        )
         self.expected_oa_label.setObjectName("expected_oa_label")
         self.actual_outcome_display = QtWidgets.QLabel(self.centralwidget)
         self.actual_outcome_display.setGeometry(QtCore.QRect(920, 220, 51, 31))
@@ -245,7 +261,9 @@ class Ui_MainWindow(object):
         font.setBold(True)
         font.setWeight(75)
         self.oa_label.setFont(font)
-        self.oa_label.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.oa_label.setAlignment(
+            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
+        )
         self.oa_label.setObjectName("oa_label")
         self.famsec_toggle_button = QtWidgets.QPushButton(self.centralwidget)
         self.famsec_toggle_button.setGeometry(QtCore.QRect(140, 360, 111, 31))
@@ -348,13 +366,20 @@ class Ui_MainWindow(object):
         self.stop_robot_button.setText(_translate("MainWindow", "Stop"))
         self.start_robot_button.setText(_translate("MainWindow", "Auto"))
         self.go_home_button.setText(_translate("MainWindow", "Go home"))
-        self.state_display.setText(_translate("MainWindow", "<html><head/><body><p>Position:</p><p>Orientation:</p><p>Next WP:</p><p>Time:</p></body></html>"))
+        self.state_display.setText(
+            _translate(
+                "MainWindow",
+                "<html><head/><body><p>Position:</p><p>Orientation:</p><p>Next WP:</p><p>Time:</p></body></html>",
+            )
+        )
         self.write_data_button.setText(_translate("MainWindow", "Write data"))
         self.mq_label.setText(_translate("MainWindow", "Model Quality Assessment"))
         self.update_goa.setText(_translate("MainWindow", "Set outcome threshold (sec)"))
         self.end_sim.setText(_translate("MainWindow", "End sim"))
         self.position_display.setText(_translate("MainWindow", "(0.0, 0.0, 0.0)"))
-        self.orientation_display.setText(_translate("MainWindow", "(0.0, 0.0, 0.0, 0.0)"))
+        self.orientation_display.setText(
+            _translate("MainWindow", "(0.0, 0.0, 0.0, 0.0)")
+        )
         self.next_waypoint_display.setText(_translate("MainWindow", "(0.0, 0.0)"))
         self.time_display.setText(_translate("MainWindow", "0.0"))
         self.goal_x_label.setText(_translate("MainWindow", "x"))
@@ -363,8 +388,12 @@ class Ui_MainWindow(object):
         self.generate_plan_button.setText(_translate("MainWindow", "Generate plan"))
         self.sq_label.setText(_translate("MainWindow", "Solver Quality Assessment"))
         self.exp_label.setText(_translate("MainWindow", "Experience Assessment"))
-        self.confidence_panel_label.setText(_translate("MainWindow", "Robot Self-Confience Assessments"))
-        self.confidence_panel_label_2.setText(_translate("MainWindow", "Robot State and Control"))
+        self.confidence_panel_label.setText(
+            _translate("MainWindow", "Robot Self-Confience Assessments")
+        )
+        self.confidence_panel_label_2.setText(
+            _translate("MainWindow", "Robot State and Control")
+        )
         self.actual_oa_label.setText(_translate("MainWindow", "Actual"))
         self.expected_oa_label.setText(_translate("MainWindow", "Expected"))
         self.oa_label.setText(_translate("MainWindow", "Outcome Assessment"))

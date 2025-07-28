@@ -49,6 +49,13 @@ class WebotsWorldModel(WorldModel):
     """
 
     def __init__(self, save_path: Path, rollouts_per_instance: int = 10) -> None:
+        """
+
+        Args:
+            save_path:
+            rollouts_per_instance:
+        """
+
         super().__init__()
         self.obstacles = {}  # {"SAND": [2.4, 3.4]}
         self.save_path = save_path
@@ -106,6 +113,10 @@ class WebotsWorldModel(WorldModel):
 
     def get_distribution_at_time(self, time: float) -> NDArray[float]:
         """
+        Compute the empirical state distribution given the latest rollout.
+
+        Distribution is [\mu, \sigma] for a subset of state elements [t, x, y]
+
         State = [
             x, y, z,
             rx, ry, rz, angle,
@@ -117,44 +128,24 @@ class WebotsWorldModel(WorldModel):
             time:
 
         Returns:
-
+            NDArray[state element, distribution]
         """
-        style = "nearest"
 
-        if style == "nearest":
+        def find_nearest(array, value):
+            idx = (np.abs(array - value)).argmin()
+            return idx
 
-            def find_nearest(array, value):
-                idx = (np.abs(array - value)).argmin()
-                return idx
-
-            idxs = [find_nearest(x[:, 8], time) for x in self.samples]
-            t_pred = [x[idx, 8] for x, idx in zip(self.samples, idxs)]
-            x_pred = [x[idx, 0] for x, idx in zip(self.samples, idxs)]
-            y_pred = [x[idx, 1] for x, idx in zip(self.samples, idxs)]
-            ret = np.array(
-                [
-                    [np.mean(t_pred), np.std(t_pred)],
-                    [np.mean(x_pred), np.std(x_pred)],
-                    [np.mean(y_pred), np.std(y_pred)],
-                ]
-            )  # [t, x, y]
-
-        elif style == "interp":
-            from scipy import interpolate
-
-            predicted_states = self.samples
-            elements = []
-            tmins = [x[0, 8] for x in predicted_states]
-            tmaxs = [x[-1, 8] for x in predicted_states]
-            for index in [0, 1, 6, 7]:
-                functs = [
-                    interpolate.interp1d(x[:, 8], x[:, index]) for x in predicted_states
-                ]
-                pxx = [f(time) for f in functs]
-                elements.append([np.mean(pxx), np.std(pxx)])
-
-            ret = np.array(elements)
-        return ret
+        idxs = [find_nearest(x[:, 8], time) for x in self.samples]
+        t_pred = [x[idx, 8] for x, idx in zip(self.samples, idxs)]
+        x_pred = [x[idx, 0] for x, idx in zip(self.samples, idxs)]
+        y_pred = [x[idx, 1] for x, idx in zip(self.samples, idxs)]
+        return np.array(
+            [
+                [np.mean(t_pred), np.std(t_pred)],
+                [np.mean(x_pred), np.std(x_pred)],
+                [np.mean(y_pred), np.std(y_pred)],
+            ]
+        )
 
     def _do_rollouts(
         self, current_sate: State, waypoint_counter: int, waypoints: NDArray[float]

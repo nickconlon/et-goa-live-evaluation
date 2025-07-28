@@ -4,6 +4,7 @@ import numpy as np
 from scipy import stats
 from world_model import WorldModel
 
+
 def gaussian_si_1d(pred_mu, pred_std, actual, min_std=1, plot=False):
     _myclip_a = min(actual - 10, pred_mu - 10)
     _myclip_b = max(actual + 10, pred_mu + 10)
